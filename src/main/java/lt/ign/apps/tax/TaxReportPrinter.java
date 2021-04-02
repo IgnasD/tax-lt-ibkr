@@ -3,6 +3,7 @@ package lt.ign.apps.tax;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -42,8 +43,8 @@ public class TaxReportPrinter {
 					var covered = open.getAmountCovered();
 					var total = trade.getQuantity();
 					var currency = trade.getCurrency();
-					System.out.println(String.format(">>> %d/%d %.2f%s %.2f%s | %.2fEUR %.2fEUR", covered, total, propProceeds, currency,
-							propFees, currency, propProceedsEur, propFeesEur));
+					System.out.println(String.format(Locale.ROOT, ">>> %d/%d %.2f%s %.2f%s | %.2fEUR %.2fEUR", covered, total, propProceeds,
+							currency, propFees, currency, propProceedsEur, propFeesEur));
 				}
 			}
 
@@ -60,12 +61,12 @@ public class TaxReportPrinter {
 
 			System.out.println(close);
 
-			System.out.println(String.format("P&L: %.2f%s %.2fEUR", pl, currency, plEur));
+			System.out.println(String.format(Locale.ROOT, "P&L: %.2f%s %.2fEUR", pl, currency, plEur));
 			System.out.println("--------------------------------------------------------");
 		}
 
-		totalPlPerCurrency.entrySet().forEach(e -> System.out.println(String.format("P&L: %.2f%s", e.getValue(), e.getKey())));
-		System.out.println(String.format("TOTAL P&L: %.2fEUR", totalPlEur));
+		totalPlPerCurrency.entrySet().forEach(e -> System.out.println(String.format(Locale.ROOT, "P&L: %.2f%s", e.getValue(), e.getKey())));
+		System.out.println(String.format(Locale.ROOT, "TOTAL P&L: %.2fEUR", totalPlEur));
 	}
 
 	public void print(List<Cover<TradeEur>> covers) {

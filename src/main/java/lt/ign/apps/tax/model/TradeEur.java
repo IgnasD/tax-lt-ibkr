@@ -1,6 +1,7 @@
 package lt.ign.apps.tax.model;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 
 public class TradeEur extends Trade {
 
@@ -34,7 +35,8 @@ public class TradeEur extends Trade {
 
 	@Override
 	public String toString() {
-		return String.format("%s | %.2fEUR %.2fEUR (rate: %.4f USD/EUR)", super.toString(), proceedsEur, feesEur, conversionRate);
+		return String.format(Locale.ROOT, "%s | %.2fEUR %.2fEUR (rate: %.4f USD/EUR)", super.toString(), proceedsEur, feesEur,
+				conversionRate);
 	}
 
 }
