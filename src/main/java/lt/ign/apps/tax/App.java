@@ -8,10 +8,8 @@ import lt.ign.apps.tax.parser.IbkrCsvParser;
 
 public class App {
 
-	private static final String USD_EUR_XML_URL = "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/usd.xml";
-
 	public static void main(String[] args) {
-		var ecbParser = new EcbXmlParser(USD_EUR_XML_URL, Currency.USD);
+		var ecbParser = EcbXmlParser.forCurrency(Currency.USD);
 		ecbParser.parse();
 		var usdEurRates = ecbParser.getRates();
 

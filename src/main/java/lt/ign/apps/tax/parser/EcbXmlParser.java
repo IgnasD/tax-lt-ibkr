@@ -16,6 +16,9 @@ import lt.ign.apps.tax.model.Currency;
 
 public class EcbXmlParser extends DefaultHandler {
 
+	private static final Map<Currency, String> XML_URLS = Map.of(Currency.USD,
+			"https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/usd.xml");
+
 	private final String url;
 	private final Currency currency;
 
@@ -56,6 +59,10 @@ public class EcbXmlParser extends DefaultHandler {
 
 	public Map<LocalDate, BigDecimal> getRates() {
 		return rates;
+	}
+
+	public static EcbXmlParser forCurrency(Currency currency) {
+		return new EcbXmlParser(XML_URLS.get(currency), currency);
 	}
 
 }
