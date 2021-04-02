@@ -1,4 +1,4 @@
-package lt.ign.apps.tax;
+package lt.ign.apps.tax.parser;
 
 import java.io.FileReader;
 import java.math.BigDecimal;
@@ -8,6 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.opencsv.CSVReader;
+
+import lt.ign.apps.tax.model.Currency;
+import lt.ign.apps.tax.model.Trade;
 
 public class IbkrCsvParser {
 

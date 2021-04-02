@@ -5,6 +5,9 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Map;
 
+import lt.ign.apps.tax.model.Currency;
+import lt.ign.apps.tax.parser.EcbXmlParser;
+
 public class CurrencyConverter {
 
 	private static final String USD_EUR_XML_URL = "https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/usd.xml";

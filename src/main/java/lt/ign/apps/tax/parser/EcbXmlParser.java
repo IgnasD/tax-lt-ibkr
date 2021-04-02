@@ -1,4 +1,4 @@
-package lt.ign.apps.tax;
+package lt.ign.apps.tax.parser;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -11,6 +11,8 @@ import javax.xml.parsers.SAXParserFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
+
+import lt.ign.apps.tax.model.Currency;
 
 public class EcbXmlParser extends DefaultHandler {
 

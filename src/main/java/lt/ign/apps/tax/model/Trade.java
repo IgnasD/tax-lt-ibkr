@@ -1,4 +1,4 @@
-package lt.ign.apps.tax;
+package lt.ign.apps.tax.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
