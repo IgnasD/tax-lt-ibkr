@@ -1,4 +1,4 @@
-package lt.ign.apps.tax;
+package lt.ign.apps.tax.core;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.Trade;
 import lt.ign.apps.tax.model.TradeEur;
+import lt.ign.apps.tax.util.MathUtils;
 
 public class TradeDataAugmenter {
 

@@ -2,6 +2,9 @@ package lt.ign.apps.tax;
 
 import java.util.List;
 
+import lt.ign.apps.tax.core.FifoTradeCoverer;
+import lt.ign.apps.tax.core.TaxReportPrinter;
+import lt.ign.apps.tax.core.TradeDataAugmenter;
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.parser.EcbXmlParser;
 import lt.ign.apps.tax.parser.IbkrCsvParser;

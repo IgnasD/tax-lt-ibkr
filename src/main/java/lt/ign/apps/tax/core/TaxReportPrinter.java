@@ -1,4 +1,4 @@
-package lt.ign.apps.tax;
+package lt.ign.apps.tax.core;
 
 import java.math.BigDecimal;
 import java.util.HashMap;

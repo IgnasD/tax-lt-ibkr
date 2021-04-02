@@ -1,4 +1,4 @@
-package lt.ign.apps.tax;
+package lt.ign.apps.tax.util;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

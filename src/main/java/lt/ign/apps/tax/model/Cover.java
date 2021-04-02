@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.function.Function;
 
-import lt.ign.apps.tax.MathUtils;
+import lt.ign.apps.tax.util.MathUtils;
 
 public class Cover<T extends Trade> {
 
