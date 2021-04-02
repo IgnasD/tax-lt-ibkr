@@ -1,7 +1,6 @@
 package lt.ign.apps.tax;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Map;
 
@@ -25,7 +24,7 @@ public class CurrencyConverter {
 	}
 
 	public BigDecimal usdToEur(BigDecimal usd, LocalDate date) {
-		return usd.divide(usdEurRates.get(date), 10 /*out of my ass*/, RoundingMode.HALF_UP);
+		return MathUtils.divide(usd, usdEurRates.get(date));
 	}
 
 }
