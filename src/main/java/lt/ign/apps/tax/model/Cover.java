@@ -47,9 +47,13 @@ public class Cover<T extends Trade> {
 			this.amountCovered = amountCovered;
 		}
 
+		public boolean isFullyCovered() {
+			return amountCovered == trade.getQuantity();
+		}
+
 		public BigDecimal proportional(Function<T, BigDecimal> getter) {
 			var initial = getter.apply(trade);
-			if (amountCovered == trade.getQuantity()) {
+			if (isFullyCovered()) {
 				return initial;
 			}
 			return MathUtils.divide(initial.multiply(new BigDecimal(amountCovered)), new BigDecimal(trade.getQuantity()));

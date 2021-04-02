@@ -21,19 +21,31 @@ public class TaxReportPrinter {
 			var pl = BigDecimal.ZERO;
 			var plEur = BigDecimal.ZERO;
 
-			for (var open : cover.getOpens()) {
-				var openPl = open.proportional(Trade::getProceeds);
-				openPl = openPl.add(open.proportional(Trade::getFees));
-				pl = pl.add(openPl);
-
-				var openPlEur = open.proportional(TradeEur::getProceedsEur);
-				openPlEur = openPlEur.add(open.proportional(TradeEur::getFeesEur));
-				plEur = plEur.add(openPlEur);
-
-				System.out.println(open.getTrade());
-			}
-
 			var close = cover.getClose();
+
+			System.out.println(close.getSymbol());
+
+			for (var open : cover.getOpens()) {
+				var propProceeds = open.proportional(Trade::getProceeds);
+				var propFees = open.proportional(Trade::getFees);
+				pl = pl.add(propProceeds.add(propFees));
+
+				var propProceedsEur = open.proportional(TradeEur::getProceedsEur);
+				var propFeesEur = open.proportional(TradeEur::getFeesEur);
+				plEur = plEur.add(propProceedsEur.add(propFeesEur));
+
+				var trade = open.getTrade();
+				if (open.isFullyCovered()) {
+					System.out.println(trade);
+				} else {
+					System.out.println(String.format("[%s]", trade));
+					var covered = open.getAmountCovered();
+					var total = trade.getQuantity();
+					var currency = trade.getCurrency();
+					System.out.println(String.format(">>> %d/%d %.2f%s %.2f%s | %.2fEUR %.2fEUR", covered, total, propProceeds, currency,
+							propFees, currency, propProceedsEur, propFeesEur));
+				}
+			}
 
 			var closePl = close.getProceeds().add(close.getFees());
 			pl = pl.add(closePl);
