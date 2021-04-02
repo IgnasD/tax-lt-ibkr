@@ -1,7 +1,9 @@
 package lt.ign.apps.tax;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import lt.ign.apps.tax.model.Currency;
@@ -10,10 +12,10 @@ import lt.ign.apps.tax.model.TradeEur;
 
 public class TradeDataAugmenter {
 
-	private final CurrencyConverter cc;
+	private final Map<LocalDate, BigDecimal> usdEurRates;
 
-	public TradeDataAugmenter(CurrencyConverter cc) {
-		this.cc = cc;
+	public TradeDataAugmenter(Map<LocalDate, BigDecimal> usdEurRates) {
+		this.usdEurRates = usdEurRates;
 	}
 
 	public List<TradeEur> augmentEurData(List<Trade> trades) {
@@ -38,9 +40,15 @@ public class TradeDataAugmenter {
 			tradeEur.setFeesEur(fees);
 			tradeEur.setConversionRate(BigDecimal.ONE);
 		} else if (currency == Currency.USD) {
-			var date = dateTime.toLocalDate();
-			tradeEur.setProceedsEur(cc.usdToEur(proceeds, date));
-			tradeEur.setFeesEur(cc.usdToEur(fees, date));
+			var conversionDate = dateTime.toLocalDate();
+			BigDecimal conversionRate = null;
+			while (conversionRate == null) {
+				conversionRate = usdEurRates.get(conversionDate);
+				conversionDate = conversionDate.minusDays(1);
+			}
+			tradeEur.setProceedsEur(MathUtils.divide(proceeds, conversionRate));
+			tradeEur.setFeesEur(MathUtils.divide(fees, conversionRate));
+			tradeEur.setConversionRate(conversionRate);
 		} else {
 			throw new IllegalStateException();
 		}
