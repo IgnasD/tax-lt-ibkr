@@ -71,7 +71,7 @@ public class Trade {
 
 	@Override
 	public String toString() {
-		return String.format("%s %s %s %d %f%s %f%s", dateTime, type, symbol, quantity, proceeds, currency, fees, currency);
+		return String.format("%s %s %s %d %.2f%s %.2f%s", dateTime, type, symbol, quantity, proceeds, currency, fees, currency);
 	}
 
 	public enum Type {

@@ -34,7 +34,7 @@ public class TradeEur extends Trade {
 
 	@Override
 	public String toString() {
-		return String.format("%s %fEUR %fEUR (rate: %f USD/EUR)", super.toString(), proceedsEur, feesEur, conversionRate);
+		return String.format("%s | %.2fEUR %.2fEUR (rate: %.4f USD/EUR)", super.toString(), proceedsEur, feesEur, conversionRate);
 	}
 
 }
