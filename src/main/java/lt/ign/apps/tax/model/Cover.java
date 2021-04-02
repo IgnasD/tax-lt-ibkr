@@ -1,6 +1,10 @@
 package lt.ign.apps.tax.model;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.function.Function;
+
+import lt.ign.apps.tax.MathUtils;
 
 public class Cover<T extends Trade> {
 
@@ -41,6 +45,14 @@ public class Cover<T extends Trade> {
 
 		public void setAmountCovered(int amountCovered) {
 			this.amountCovered = amountCovered;
+		}
+
+		public BigDecimal proportional(Function<T, BigDecimal> getter) {
+			var initial = getter.apply(trade);
+			if (amountCovered == trade.getQuantity()) {
+				return initial;
+			}
+			return MathUtils.divide(initial.multiply(new BigDecimal(amountCovered)), new BigDecimal(trade.getQuantity()));
 		}
 	}
 
