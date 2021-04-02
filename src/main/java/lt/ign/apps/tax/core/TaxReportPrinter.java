@@ -65,7 +65,8 @@ public class TaxReportPrinter {
 			System.out.println("--------------------------------------------------------");
 		}
 
-		totalPlPerCurrency.entrySet().forEach(e -> System.out.println(String.format(Locale.ROOT, "P&L: %.2f%s", e.getValue(), e.getKey())));
+		totalPlPerCurrency.entrySet().forEach(e -> System.out.println(String.format(Locale.ROOT,
+				"%s P&L: %.2f%s", e.getKey(), e.getValue(), e.getKey())));
 		System.out.println(String.format(Locale.ROOT, "TOTAL P&L: %.2fEUR", totalPlEur));
 	}
 
