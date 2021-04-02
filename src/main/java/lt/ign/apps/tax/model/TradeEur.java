@@ -32,4 +32,9 @@ public class TradeEur extends Trade {
 		this.conversionRate = conversionRate;
 	}
 
+	@Override
+	public String toString() {
+		return String.format("%s %fEUR %fEUR (rate: %f USD/EUR)", super.toString(), proceedsEur, feesEur, conversionRate);
+	}
+
 }

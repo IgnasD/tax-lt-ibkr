@@ -69,6 +69,11 @@ public class Trade {
 		this.currency = currency;
 	}
 
+	@Override
+	public String toString() {
+		return String.format("%s %s %s %d %f%s %f%s", dateTime, type, symbol, quantity, proceeds, currency, fees, currency);
+	}
+
 	public enum Type {
 		OPEN, CLOSE
 	}
