@@ -2,10 +2,10 @@ package lt.ign.apps.tax.model;
 
 import java.util.List;
 
-public class Cover {
+public class Cover<T extends Trade> {
 
 	private List<Open> opens;
-	private Trade close;
+	private T close;
 
 	public List<Open> getOpens() {
 		return opens;
@@ -15,23 +15,23 @@ public class Cover {
 		this.opens = opens;
 	}
 
-	public Trade getClose() {
+	public T getClose() {
 		return close;
 	}
 
-	public void setClose(Trade close) {
+	public void setClose(T close) {
 		this.close = close;
 	}
 
-	public static class Open {
-		private Trade trade;
+	public class Open {
+		private T trade;
 		private int amountCovered;
 
-		public Trade getTrade() {
+		public T getTrade() {
 			return trade;
 		}
 
-		public void setTrade(Trade trade) {
+		public void setTrade(T trade) {
 			this.trade = trade;
 		}
 
