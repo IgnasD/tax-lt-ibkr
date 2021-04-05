@@ -14,6 +14,18 @@ import lt.ign.apps.tax.model.TradeEur;
 
 public class TaxReportPrinter {
 
+	public void print(List<Cover<TradeEur>> covers) {
+		Map<Integer, List<Cover<TradeEur>>> yearlyCovers = covers.stream()
+				.collect(Collectors.groupingBy(c -> c.getClose().getDateTime().getYear()));
+		for (var entry : yearlyCovers.entrySet()) {
+			System.out.println("========================================================");
+			System.out.println("Tax year: " + entry.getKey());
+			System.out.println("--------------------------------------------------------");
+			printInternal(entry.getValue());
+			System.out.println("========================================================");
+		}
+	}
+
 	private void printInternal(List<Cover<TradeEur>> covers) {
 		var totalPlPerCurrency = new HashMap<Currency, BigDecimal>();
 		var totalPlEur = BigDecimal.ZERO;
@@ -65,21 +77,9 @@ public class TaxReportPrinter {
 			System.out.println("--------------------------------------------------------");
 		}
 
-		totalPlPerCurrency.entrySet().forEach(e -> System.out.println(String.format(Locale.ROOT,
-				"%s P&L: %.2f%s", e.getKey(), e.getValue(), e.getKey())));
+		totalPlPerCurrency.entrySet()
+				.forEach(e -> System.out.println(String.format(Locale.ROOT, "%s P&L: %.2f%s", e.getKey(), e.getValue(), e.getKey())));
 		System.out.println(String.format(Locale.ROOT, "TOTAL P&L: %.2fEUR", totalPlEur));
-	}
-
-	public void print(List<Cover<TradeEur>> covers) {
-		Map<Integer, List<Cover<TradeEur>>> yearlyCovers = covers.stream()
-				.collect(Collectors.groupingBy(c -> c.getClose().getDateTime().getYear()));
-		for (var entry : yearlyCovers.entrySet()) {
-			System.out.println("========================================================");
-			System.out.println("Tax year: " + entry.getKey());
-			System.out.println("--------------------------------------------------------");
-			printInternal(entry.getValue());
-			System.out.println("========================================================");
-		}
 	}
 
 }
