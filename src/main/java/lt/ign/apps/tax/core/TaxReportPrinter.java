@@ -18,21 +18,21 @@ public class TaxReportPrinter {
 		Map<Integer, List<Cover<TradeEur>>> yearlyCovers = covers.stream()
 				.collect(Collectors.groupingBy(c -> c.getClose().getDateTime().getYear()));
 		for (var entry : yearlyCovers.entrySet()) {
-			System.out.println("========================================================");
+			System.out.println("====================================================================================================");
 			System.out.println("Tax year: " + entry.getKey());
-			System.out.println("--------------------------------------------------------");
+			System.out.println("----------------------------------------------------------------------------------------------------");
 			printInternal(entry.getValue());
-			System.out.println("========================================================");
+			System.out.println("====================================================================================================");
 		}
 	}
 
 	private void printInternal(List<Cover<TradeEur>> covers) {
-		var totalPlPerCurrency = new HashMap<Currency, BigDecimal>();
-		var totalPlEur = BigDecimal.ZERO;
+		var totalRacPerCurrency = new HashMap<Currency, RevenueAndCost>();
+		var totalRacEur = new RevenueAndCost();
 
 		for (var cover : covers) {
-			var pl = BigDecimal.ZERO;
-			var plEur = BigDecimal.ZERO;
+			var tradeRacNative = new RevenueAndCost();
+			var tradeRacEur = new RevenueAndCost();
 
 			var close = cover.getClose();
 
@@ -40,12 +40,14 @@ public class TaxReportPrinter {
 
 			for (var open : cover.getOpens()) {
 				var propProceeds = open.proportional(Trade::getProceeds);
+				tradeRacNative.addCost(propProceeds);
 				var propFees = open.proportional(Trade::getFees);
-				pl = pl.add(propProceeds.add(propFees));
+				tradeRacNative.addCost(propFees);
 
 				var propProceedsEur = open.proportional(TradeEur::getProceedsEur);
+				tradeRacEur.addCost(propProceedsEur);
 				var propFeesEur = open.proportional(TradeEur::getFeesEur);
-				plEur = plEur.add(propProceedsEur.add(propFeesEur));
+				tradeRacEur.addCost(propFeesEur);
 
 				var trade = open.getTrade();
 				if (open.isFullyCovered()) {
@@ -60,26 +62,57 @@ public class TaxReportPrinter {
 				}
 			}
 
-			var closePl = close.getProceeds().add(close.getFees());
-			pl = pl.add(closePl);
+			tradeRacNative.addRevenue(close.getProceeds());
+			tradeRacNative.addCost(close.getFees());
 
-			var closePlEur = close.getProceedsEur().add(close.getFeesEur());
-			plEur = plEur.add(closePlEur);
+			tradeRacEur.addRevenue(close.getProceedsEur());
+			tradeRacEur.addCost(close.getFeesEur());
 
 			var currency = close.getCurrency();
-			totalPlPerCurrency.merge(currency, pl, (a, b) -> a.add(b));
+			totalRacPerCurrency.merge(currency, tradeRacNative, (a, b) -> {
+				a.addRevenueAndCost(b);
+				return a;
+			});
 
-			totalPlEur = totalPlEur.add(plEur);
+			totalRacEur.addRevenueAndCost(tradeRacEur);
 
 			System.out.println(close);
 
-			System.out.println(String.format(Locale.ROOT, "P&L: %.2f%s %.2fEUR", pl, currency, plEur));
-			System.out.println("--------------------------------------------------------");
+			System.out.println(String.format(Locale.ROOT, "P&L: %.2f%s %.2fEUR",
+					tradeRacNative.profitLoss(), currency, tradeRacEur.profitLoss()));
+			System.out.println("----------------------------------------------------------------------------------------------------");
 		}
 
-		totalPlPerCurrency.entrySet()
-				.forEach(e -> System.out.println(String.format(Locale.ROOT, "%s P&L: %.2f%s", e.getKey(), e.getValue(), e.getKey())));
-		System.out.println(String.format(Locale.ROOT, "TOTAL P&L: %.2fEUR", totalPlEur));
+		totalRacPerCurrency.entrySet().forEach(e -> {
+			var currency = e.getKey();
+			var rac = e.getValue();
+			System.out.println(String.format(Locale.ROOT, "%s. Cost: %.2f%s; Revenue: %.2f%s; P&L: %.2f%s", currency, rac.cost, currency,
+					rac.revenue, currency, rac.profitLoss(), currency));
+		});
+		System.out.println(String.format(Locale.ROOT, "TOTAL. Cost: %.2fEUR; Revenue: %.2fEUR; P&L: %.2fEUR", totalRacEur.cost,
+				totalRacEur.revenue, totalRacEur.profitLoss()));
+	}
+
+	private static class RevenueAndCost {
+		private BigDecimal revenue = BigDecimal.ZERO;
+		private BigDecimal cost = BigDecimal.ZERO; // negatively denominated
+
+		private void addRevenue(BigDecimal revenue) {
+			this.revenue = this.revenue.add(revenue);
+		}
+
+		private void addCost(BigDecimal cost) {
+			this.cost = this.cost.add(cost);
+		}
+
+		private void addRevenueAndCost(RevenueAndCost rac) {
+			addRevenue(rac.revenue);
+			addCost(rac.cost);
+		}
+
+		private BigDecimal profitLoss() {
+			return revenue.add(cost);
+		}
 	}
 
 }
