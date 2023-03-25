@@ -1,7 +1,8 @@
 package lt.ign.apps.tax.parser;
 
-import java.io.FileReader;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -37,16 +38,7 @@ public class IbkrCsvParser {
 
 	private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd, HH:mm:ss");
 
-	private final List<String> paths;
-
-	private Map<String, Integer> fieldMap;
-	private List<Trade> trades;
-
-	public IbkrCsvParser(List<String> paths) {
-		this.paths = paths;
-	}
-
-	private Map<String, Integer> genFieldMap(String[] fields) {
+	private static Map<String, Integer> genFieldMap(String[] fields) {
 		var fieldMap = new HashMap<String, Integer>();
 		for (int i = 0; i < fields.length; i++) {
 			fieldMap.put(fields[i], i);
@@ -54,7 +46,7 @@ public class IbkrCsvParser {
 		return fieldMap;
 	}
 
-	private Trade.Type parseTradeType(String str) {
+	private static Trade.Type parseTradeType(String str) {
 		switch (str) {
 		case "O":
 		case "O;P": // hacky hacky
@@ -67,43 +59,43 @@ public class IbkrCsvParser {
 		}
 	}
 
-	public void parse() {
-		trades = new ArrayList<>();
-		try {
-			for (String path : paths) {
-				try (CSVReader reader = new CSVReader(new FileReader(path))) {
-					String[] line;
-					while ((line = reader.readNext()) != null) {
-						if (!line[0].equals(SECTION_TRADES)) continue;
-						if (line[1].equals(LINE_HEADER)) {
-							fieldMap = genFieldMap(line);
-							continue;
-						}
-						if (!line[1].equals(LINE_DATA)) continue;
-						if (!line[fieldMap.get(HEADER_DATA_DISCRIMINATOR)].equals(DATA_ORDER)) continue;
-						if (!line[fieldMap.get(HEADER_ASSET_CATEGORY)].equals(ASSET_STOCKS)) continue;
+	private static List<Trade> parseFile(Path csvFile) {
+		Map<String, Integer> fieldMap = null;
+		List<Trade> trades = new ArrayList<>();
 
-						var trade = new Trade();
-						trade.setCurrency(Currency.valueOf(line[fieldMap.get(HEADER_CURRENCY)]));
-						trade.setSymbol(line[fieldMap.get(HEADER_SYMBOL)]);
-						trade.setDateTime(LocalDateTime.parse(line[fieldMap.get(HEADER_DATE_TIME)], dateTimeFormatter));
-						trade.setQuantity(Integer.parseInt(line[fieldMap.get(HEADER_QUANTITY)]));
-						trade.setProceeds(new BigDecimal(line[fieldMap.get(HEADER_PROCEEDS)]));
-						trade.setFees(new BigDecimal(line[fieldMap.get(HEADER_COMM_FEE)]));
-						trade.setType(parseTradeType(line[fieldMap.get(HEADER_CODE)]));
-						trades.add(trade);
-
-						// TODO adjust for stock splits
-					}
+		try (CSVReader reader = new CSVReader(Files.newBufferedReader(csvFile))) {
+			String[] line;
+			while ((line = reader.readNext()) != null) {
+				if (!line[0].equals(SECTION_TRADES)) continue;
+				if (line[1].equals(LINE_HEADER)) {
+					fieldMap = genFieldMap(line);
+					continue;
 				}
+				if (!line[1].equals(LINE_DATA)) continue;
+				if (!line[fieldMap.get(HEADER_DATA_DISCRIMINATOR)].equals(DATA_ORDER)) continue;
+				if (!line[fieldMap.get(HEADER_ASSET_CATEGORY)].equals(ASSET_STOCKS)) continue;
+
+				var trade = new Trade();
+				trade.setCurrency(Currency.valueOf(line[fieldMap.get(HEADER_CURRENCY)]));
+				trade.setSymbol(line[fieldMap.get(HEADER_SYMBOL)]);
+				trade.setDateTime(LocalDateTime.parse(line[fieldMap.get(HEADER_DATE_TIME)], dateTimeFormatter));
+				trade.setQuantity(Integer.parseInt(line[fieldMap.get(HEADER_QUANTITY)]));
+				trade.setProceeds(new BigDecimal(line[fieldMap.get(HEADER_PROCEEDS)]));
+				trade.setFees(new BigDecimal(line[fieldMap.get(HEADER_COMM_FEE)]));
+				trade.setType(parseTradeType(line[fieldMap.get(HEADER_CODE)]));
+				trades.add(trade);
+
+				// TODO adjust for stock splits
 			}
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+
+		return trades;
 	}
 
-	public List<Trade> getTrades() {
-		return trades;
+	public static List<Trade> parse(List<Path> csvFiles) {
+		return csvFiles.stream().flatMap(path -> parseFile(path).stream()).toList();
 	}
 
 }

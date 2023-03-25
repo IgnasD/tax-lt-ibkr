@@ -1,6 +1,7 @@
 package lt.ign.apps.tax;
 
-import java.util.List;
+import java.nio.file.Paths;
+import java.util.stream.Stream;
 
 import lt.ign.apps.tax.core.FifoTradeCoverer;
 import lt.ign.apps.tax.core.TaxReportPrinter;
@@ -16,9 +17,8 @@ public class App {
 		ecbParser.parse();
 		var usdEurRates = ecbParser.getRates();
 
-		var ibkrParser = new IbkrCsvParser(List.of(args));
-		ibkrParser.parse();
-		var tradesOrig = ibkrParser.getTrades();
+		var csvFiles = Stream.of(args).map(Paths::get).toList();
+		var tradesOrig = IbkrCsvParser.parse(csvFiles);
 
 		var augmenter = new TradeDataAugmenter(usdEurRates);
 		var tradesAug = augmenter.augmentEurData(tradesOrig);
