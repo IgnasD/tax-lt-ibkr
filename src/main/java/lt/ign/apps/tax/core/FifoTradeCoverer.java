@@ -1,74 +1,76 @@
 package lt.ign.apps.tax.core;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 import lt.ign.apps.tax.model.Cover;
+import lt.ign.apps.tax.model.event.Event;
+import lt.ign.apps.tax.model.event.Split;
 import lt.ign.apps.tax.model.event.Trade;
+import lt.ign.apps.tax.mods.PartView;
+import lt.ign.apps.tax.mods.StockSplit;
 
 public class FifoTradeCoverer {
 
-	public <T extends Trade> List<Cover<T>> cover(List<T> trades) {
-		Map<String, List<TrackedTrade<T>>> opens = new HashMap<>();
-		List<T> closes = new ArrayList<>();
+	private final String symbol;
 
-		trades.stream().sorted(Comparator.comparing(Trade::getDateTime)).forEachOrdered(trade -> {
-			switch (trade.getType()) {
-			case OPEN:
-				opens.compute(trade.getSymbol(), (k, v) -> {
-					if (v == null) v = new ArrayList<>();
-					TrackedTrade<T> open = new TrackedTrade<>();
-					open.trade = trade;
-					open.amountCovered = 0;
-					v.add(open);
-					return v;
-				});
-				break;
-			case CLOSE:
-				closes.add(trade);
-				break;
-			default:
-				throw new IllegalStateException();
+	public FifoTradeCoverer(String symbol) {
+		this.symbol = symbol;
+	}
+
+	public List<Cover> cover(List<Event> events) {
+		var covers = new ArrayList<Cover>();
+
+		var eventQueue = events.stream().sorted(Comparator.comparing(Event::getDateTime)).collect(Collectors.toCollection(ArrayDeque::new));
+		var uncoveredOpens = new ArrayDeque<Trade>();
+
+		while (!eventQueue.isEmpty()) {
+			var event = eventQueue.poll();
+			if (!event.getSymbol().equals(symbol)) {
+				throw new IllegalArgumentException("Found unexpected symbol: " + event.getSymbol());
 			}
-		});
+			if (event instanceof Split split) {
+				var splitMod = new StockSplit(split.getMultiplier());
+				uncoveredOpens = uncoveredOpens.stream().map(trade -> trade.modify(splitMod))
+					.collect(Collectors.toCollection(ArrayDeque::new));
+			} else if (event instanceof Trade trade) {
+				switch (trade.getType()) {
+				case OPEN -> {
+					uncoveredOpens.add(trade);
+				}
+				case CLOSE -> {
+					var opens = new ArrayList<Trade>();
+					int covered = 0;
+					int toCover = -trade.getQuantity();
 
-		List<Cover<T>> covers = new ArrayList<>();
+					while (covered < toCover) {
+						var open = uncoveredOpens.remove();
+						int openQuantity = open.getQuantity();
 
-		for (T tradeClose : closes) {
-			int covered = 0;
-			int toCover = -tradeClose.getQuantity();
-			String symbol = tradeClose.getSymbol();
+						int coverAmount = Math.min(toCover - covered, openQuantity);
+						covered += coverAmount;
 
-			var cover = new Cover<T>();
-			List<Cover<T>.Open> tradeOpens = new ArrayList<>();
+						if (coverAmount < openQuantity) {
+							uncoveredOpens.addFirst(open.modify(new PartView(openQuantity - coverAmount)));
+							opens.add(open.modify(new PartView(coverAmount)));
+						} else {
+							opens.add(open);
+						}
+					}
 
-			while (covered < toCover) {
-				var open = opens.get(symbol).stream().filter(tt -> tt.amountCovered < tt.trade.getQuantity()).findFirst().get();
-				var coverAmount = Math.min(toCover - covered, open.trade.getQuantity() - open.amountCovered);
-
-				open.amountCovered += coverAmount;
-				covered += coverAmount;
-
-				var tradeOpen = cover.new Open();
-				tradeOpen.setTrade(open.trade);
-				tradeOpen.setAmountCovered(coverAmount);
-				tradeOpens.add(tradeOpen);
+					covers.add(new Cover(opens, trade));
+				}
+				default -> throw new UnsupportedOperationException("Unknown trade type " + trade.getType());
+				}
+			} else {
+				throw new UnsupportedOperationException("Unknown event type " + event.getClass().getSimpleName());
 			}
-
-			cover.setOpens(tradeOpens);
-			cover.setClose(tradeClose);
-			covers.add(cover);
 		}
 
 		return covers;
-	}
-
-	private static class TrackedTrade<T extends Trade> {
-		private T trade;
-		private int amountCovered;
 	}
 
 }

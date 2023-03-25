@@ -1,13 +1,11 @@
 package lt.ign.apps.tax;
 
 import java.nio.file.Paths;
-import java.util.Comparator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import lt.ign.apps.tax.core.FifoTradeCoverer;
-import lt.ign.apps.tax.core.TaxReportPrinter;
 import lt.ign.apps.tax.core.EurConverter;
+import lt.ign.apps.tax.core.FifoTradeCoverer;
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.Event;
 import lt.ign.apps.tax.parser.EcbXmlParser;
@@ -16,23 +14,18 @@ import lt.ign.apps.tax.parser.IbkrCsvParser;
 public class App {
 
 	public static void main(String[] args) {
-		var usdEurRates = EcbXmlParser.forCurrency(Currency.USD).parseRates();
-
 		var csvFiles = Stream.of(args).map(Paths::get).toList();
-		var eventsCsv = IbkrCsvParser.parse(csvFiles);
 
+		var usdEurRates = EcbXmlParser.forCurrency(Currency.USD).parseRates();
 		var eurConverter = new EurConverter(usdEurRates);
 
-		eventsCsv.stream().map(eurConverter::convertToEur).collect(Collectors.groupingBy(Event::getSymbol)).forEach((symbol, events) -> {
-			System.out.println(symbol);
-			events.stream().sorted(Comparator.comparing(Event::getDateTime)).forEachOrdered(System.out::println);
-		});
+		IbkrCsvParser.parse(csvFiles).stream()
+			.map(eurConverter::convertToEur)
+			.collect(Collectors.groupingBy(Event::getSymbol)).entrySet().stream()
+			.flatMap(entry -> new FifoTradeCoverer(entry.getKey()).cover(entry.getValue()).stream());
 
-//		var coverer = new FifoTradeCoverer();
-//		var covers = coverer.cover(tradesAug);
-//
-//		var printer = new TaxReportPrinter();
-//		printer.print(covers);
+		//var printer = new TaxReportPrinter();
+		//printer.print(covers);
 	}
 
 }
