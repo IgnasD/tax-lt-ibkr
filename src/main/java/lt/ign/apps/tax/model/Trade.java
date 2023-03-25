@@ -1,54 +1,44 @@
 package lt.ign.apps.tax.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Locale;
 
 public class Trade extends Event {
 
-	private Type type;
-	private int quantity;
-	private BigDecimal proceeds;
-	private BigDecimal fees;
-	private Currency currency;
+	private final Type type;
+	private final int quantity;
+	private final BigDecimal proceeds;
+	private final BigDecimal fees;
+	private final Currency currency;
+
+	public Trade(String symbol, LocalDateTime dateTime, Type type, int quantity, BigDecimal proceeds, BigDecimal fees, Currency currency) {
+		super(symbol, dateTime);
+		this.type = type;
+		this.quantity = quantity;
+		this.proceeds = proceeds;
+		this.fees = fees;
+		this.currency = currency;
+	}
 
 	public Type getType() {
 		return type;
-	}
-
-	public void setType(Type type) {
-		this.type = type;
 	}
 
 	public int getQuantity() {
 		return quantity;
 	}
 
-	public void setQuantity(int quantity) {
-		this.quantity = quantity;
-	}
-
 	public BigDecimal getProceeds() {
 		return proceeds;
-	}
-
-	public void setProceeds(BigDecimal proceeds) {
-		this.proceeds = proceeds;
 	}
 
 	public BigDecimal getFees() {
 		return fees;
 	}
 
-	public void setFees(BigDecimal fees) {
-		this.fees = fees;
-	}
-
 	public Currency getCurrency() {
 		return currency;
-	}
-
-	public void setCurrency(Currency currency) {
-		this.currency = currency;
 	}
 
 	@Override

@@ -1,15 +1,18 @@
 package lt.ign.apps.tax.model;
 
+import java.time.LocalDateTime;
+
 public class Split extends Event {
 
-	public int multiplier;
+	private final int multiplier;
+
+	public Split(String symbol, LocalDateTime dateTime, int multiplier) {
+		super(symbol, dateTime);
+		this.multiplier = multiplier;
+	}
 
 	public int getMultiplier() {
 		return multiplier;
-	}
-
-	public void setMultiplier(int multiplier) {
-		this.multiplier = multiplier;
 	}
 
 }

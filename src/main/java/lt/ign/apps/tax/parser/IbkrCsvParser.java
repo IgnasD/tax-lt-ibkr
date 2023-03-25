@@ -75,15 +75,14 @@ public class IbkrCsvParser {
 			return Optional.empty();
 		}
 
-		var trade = new Trade();
-		trade.setCurrency(Currency.valueOf(line[fieldMap.get(HEADER_CURRENCY)]));
-		trade.setSymbol(line[fieldMap.get(HEADER_SYMBOL)]);
-		trade.setDateTime(LocalDateTime.parse(line[fieldMap.get(HEADER_DATE_TIME)], dateTimeFormatter));
-		trade.setQuantity(Integer.parseInt(line[fieldMap.get(HEADER_QUANTITY)]));
-		trade.setProceeds(new BigDecimal(line[fieldMap.get(HEADER_PROCEEDS)]));
-		trade.setFees(new BigDecimal(line[fieldMap.get(HEADER_COMM_FEE)]));
-		trade.setType(parseTradeType(line[fieldMap.get(HEADER_CODE)]));
-		return Optional.of(trade);
+		var currency = Currency.valueOf(line[fieldMap.get(HEADER_CURRENCY)]);
+		var symbol = line[fieldMap.get(HEADER_SYMBOL)];
+		var dateTime = LocalDateTime.parse(line[fieldMap.get(HEADER_DATE_TIME)], dateTimeFormatter);
+		var quantity = Integer.parseInt(line[fieldMap.get(HEADER_QUANTITY)]);
+		var proceeds = new BigDecimal(line[fieldMap.get(HEADER_PROCEEDS)]);
+		var fees = new BigDecimal(line[fieldMap.get(HEADER_COMM_FEE)]);
+		var type = parseTradeType(line[fieldMap.get(HEADER_CODE)]);
+		return Optional.of(new Trade(symbol, dateTime, type, quantity, proceeds, fees, currency));
 	}
 
 	private static Optional<Split> parseSplit(String[] line, Map<String, Integer> fieldMap) {
@@ -98,9 +97,8 @@ public class IbkrCsvParser {
 			throw new UnsupportedOperationException("Unknown split detected: " + Arrays.toString(line));
 		}
 
-		var split = new Split();
-		split.setDateTime(LocalDateTime.parse(line[fieldMap.get(HEADER_DATE_TIME)], dateTimeFormatter));
-		split.setSymbol(matcher.group(1));
+		var dateTime = LocalDateTime.parse(line[fieldMap.get(HEADER_DATE_TIME)], dateTimeFormatter);
+		var symbol = matcher.group(1);
 
 		var dividend = Integer.parseInt(matcher.group(2));
 		var divisor = Integer.parseInt(matcher.group(3));
@@ -109,9 +107,7 @@ public class IbkrCsvParser {
 		}
 		var multiplier = dividend / divisor;
 
-		split.setMultiplier(multiplier);
-
-		return Optional.of(split);
+		return Optional.of(new Split(symbol, dateTime, multiplier));
 	}
 
 	private static List<Event> parseFile(Path csvFile) {
