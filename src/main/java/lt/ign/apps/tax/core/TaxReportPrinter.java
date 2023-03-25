@@ -1,6 +1,7 @@
 package lt.ign.apps.tax.core;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -19,7 +20,7 @@ public class TaxReportPrinter {
 			System.out.println("====================================================================================================");
 			System.out.println("Tax year: " + entry.getKey());
 			System.out.println("----------------------------------------------------------------------------------------------------");
-			printInternal(entry.getValue());
+			printInternal(entry.getValue().stream().sorted(Comparator.comparing(c -> c.getClose().getDateTime())).toList());
 			System.out.println("====================================================================================================");
 		}
 	}

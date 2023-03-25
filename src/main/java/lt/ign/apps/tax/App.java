@@ -1,7 +1,6 @@
 package lt.ign.apps.tax;
 
 import java.nio.file.Paths;
-import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -23,7 +22,7 @@ public class App {
 
 		var covers = IbkrCsvParser.parse(csvFiles).stream()
 			.map(eurConverter::convertToEur)
-			.collect(Collectors.groupingBy(Event::getSymbol, LinkedHashMap::new, Collectors.toList())).entrySet().stream()
+			.collect(Collectors.groupingBy(Event::getSymbol)).entrySet().stream()
 			.flatMap(entry -> new FifoTradeCoverer(entry.getKey()).cover(entry.getValue()).stream())
 			.toList();
 
