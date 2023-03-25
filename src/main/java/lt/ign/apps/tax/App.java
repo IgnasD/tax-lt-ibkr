@@ -16,9 +16,7 @@ import lt.ign.apps.tax.parser.IbkrCsvParser;
 public class App {
 
 	public static void main(String[] args) {
-		var ecbParser = EcbXmlParser.forCurrency(Currency.USD);
-		ecbParser.parse();
-		var usdEurRates = ecbParser.getRates();
+		var usdEurRates = EcbXmlParser.forCurrency(Currency.USD).parseRates();
 
 		var csvFiles = Stream.of(args).map(Paths::get).toList();
 		var eventsCsv = IbkrCsvParser.parse(csvFiles);
