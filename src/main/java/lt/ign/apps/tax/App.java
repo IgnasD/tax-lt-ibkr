@@ -1,11 +1,13 @@
 package lt.ign.apps.tax;
 
 import java.nio.file.Paths;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import lt.ign.apps.tax.core.EurConverter;
 import lt.ign.apps.tax.core.FifoTradeCoverer;
+import lt.ign.apps.tax.core.TaxReportPrinter;
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.Event;
 import lt.ign.apps.tax.parser.EcbXmlParser;
@@ -19,13 +21,13 @@ public class App {
 		var usdEurRates = EcbXmlParser.forCurrency(Currency.USD).parseRates();
 		var eurConverter = new EurConverter(usdEurRates);
 
-		IbkrCsvParser.parse(csvFiles).stream()
+		var covers = IbkrCsvParser.parse(csvFiles).stream()
 			.map(eurConverter::convertToEur)
-			.collect(Collectors.groupingBy(Event::getSymbol)).entrySet().stream()
-			.flatMap(entry -> new FifoTradeCoverer(entry.getKey()).cover(entry.getValue()).stream());
+			.collect(Collectors.groupingBy(Event::getSymbol, LinkedHashMap::new, Collectors.toList())).entrySet().stream()
+			.flatMap(entry -> new FifoTradeCoverer(entry.getKey()).cover(entry.getValue()).stream())
+			.toList();
 
-		//var printer = new TaxReportPrinter();
-		//printer.print(covers);
+		TaxReportPrinter.print(covers);
 	}
 
 }
