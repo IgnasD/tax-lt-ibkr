@@ -9,12 +9,12 @@ import java.util.stream.Collectors;
 
 import lt.ign.apps.tax.model.Cover;
 import lt.ign.apps.tax.model.Currency;
-import lt.ign.apps.tax.model.Trade;
-import lt.ign.apps.tax.model.TradeEur;
+import lt.ign.apps.tax.model.event.Trade;
+//import lt.ign.apps.tax.model.event.TradeEur;
 
 public class TaxReportPrinter {
 
-	public void print(List<Cover<TradeEur>> covers) {
+	/*public void print(List<Cover<TradeEur>> covers) {
 		Map<Integer, List<Cover<TradeEur>>> yearlyCovers = covers.stream()
 				.collect(Collectors.groupingBy(c -> c.getClose().getDateTime().getYear()));
 		for (var entry : yearlyCovers.entrySet()) {
@@ -113,6 +113,6 @@ public class TaxReportPrinter {
 		private BigDecimal profitLoss() {
 			return revenue.add(cost);
 		}
-	}
+	}*/
 
 }

@@ -1,8 +1,12 @@
-package lt.ign.apps.tax.model;
+package lt.ign.apps.tax.model.event;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
+
+import lt.ign.apps.tax.model.Currency;
+import lt.ign.apps.tax.mods.Modifier;
 
 public class Trade extends Event {
 
@@ -39,6 +43,10 @@ public class Trade extends Event {
 
 	public Currency getCurrency() {
 		return currency;
+	}
+	
+	public Trade modify(Modifier modifier) {
+		return ModifiedTrade.create(this, List.of(modifier));
 	}
 
 	@Override

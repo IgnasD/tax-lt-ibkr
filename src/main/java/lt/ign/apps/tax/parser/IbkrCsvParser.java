@@ -16,9 +16,9 @@ import java.util.regex.Pattern;
 import com.opencsv.CSVReader;
 
 import lt.ign.apps.tax.model.Currency;
-import lt.ign.apps.tax.model.Event;
-import lt.ign.apps.tax.model.Split;
-import lt.ign.apps.tax.model.Trade;
+import lt.ign.apps.tax.model.event.Event;
+import lt.ign.apps.tax.model.event.Split;
+import lt.ign.apps.tax.model.event.Trade;
 
 public class IbkrCsvParser {
 

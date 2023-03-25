@@ -1,4 +1,4 @@
-package lt.ign.apps.tax.model;
+package lt.ign.apps.tax.model.event;
 
 import java.time.LocalDateTime;
 

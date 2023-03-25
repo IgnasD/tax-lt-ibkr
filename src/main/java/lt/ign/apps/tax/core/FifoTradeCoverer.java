@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import lt.ign.apps.tax.model.Cover;
-import lt.ign.apps.tax.model.Trade;
+import lt.ign.apps.tax.model.event.Trade;
 
 public class FifoTradeCoverer {
 
