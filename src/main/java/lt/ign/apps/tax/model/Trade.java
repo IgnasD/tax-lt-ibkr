@@ -1,14 +1,11 @@
 package lt.ign.apps.tax.model;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Locale;
 
-public class Trade {
+public class Trade extends Event {
 
 	private Type type;
-	private String symbol;
-	private LocalDateTime dateTime;
 	private int quantity;
 	private BigDecimal proceeds;
 	private BigDecimal fees;
@@ -20,22 +17,6 @@ public class Trade {
 
 	public void setType(Type type) {
 		this.type = type;
-	}
-
-	public String getSymbol() {
-		return symbol;
-	}
-
-	public void setSymbol(String symbol) {
-		this.symbol = symbol;
-	}
-
-	public LocalDateTime getDateTime() {
-		return dateTime;
-	}
-
-	public void setDateTime(LocalDateTime dateTime) {
-		this.dateTime = dateTime;
 	}
 
 	public int getQuantity() {
@@ -72,8 +53,8 @@ public class Trade {
 
 	@Override
 	public String toString() {
-		return String.format(Locale.ROOT, "%s %s %s %d %.2f%s %.2f%s", dateTime, type, symbol, quantity, proceeds, currency, fees,
-				currency);
+		return String.format(Locale.ROOT, "%s %s %s %d %.2f%s %.2f%s", getDateTime(), type, getSymbol(), quantity, proceeds, currency, fees,
+			currency);
 	}
 
 	public enum Type {
