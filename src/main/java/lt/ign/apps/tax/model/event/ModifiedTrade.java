@@ -35,16 +35,13 @@ public class ModifiedTrade extends Trade {
 		return create(original, mods);
 	}
 
-	public static ModifiedTrade create(Trade original, List<Modifier> mods) {
+	public static Trade create(Trade original, List<Modifier> mods) {
+		if (mods.isEmpty()) {
+			return original;
+		}
 		var modified = mods.stream().reduce(original, (trade, mod) -> mod.apply(trade), (oldTrade, newTrade) -> newTrade);
 		return new ModifiedTrade(modified.getSymbol(), modified.getDateTime(), modified.getType(), modified.getQuantity(),
 			modified.getProceeds(), modified.getFees(), modified.getCurrency(), original, mods);
 	}
-
-	/*@Override
-	public String toString() {
-		return String.format(Locale.ROOT, "%s | %.2fEUR %.2fEUR (rate: %.4f USD/EUR)", super.toString(), proceedsEur, feesEur,
-				conversionRate);
-	}*/
 
 }

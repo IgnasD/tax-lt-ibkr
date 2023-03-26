@@ -26,7 +26,7 @@ public class App {
 			.flatMap(entry -> new FifoTradeCoverer(entry.getKey()).cover(entry.getValue()).stream())
 			.toList();
 
-		TaxReportPrinter.print(covers);
+		new TaxReportPrinter(Currency.EUR).print(covers);
 	}
 
 }
