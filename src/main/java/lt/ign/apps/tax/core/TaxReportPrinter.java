@@ -1,11 +1,13 @@
 package lt.ign.apps.tax.core;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import lt.ign.apps.tax.model.Cover;
@@ -13,6 +15,9 @@ import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.ModifiedTrade;
 import lt.ign.apps.tax.model.event.Trade;
 import lt.ign.apps.tax.mods.CurrencyConversion;
+import lt.ign.apps.tax.mods.Modifier;
+import lt.ign.apps.tax.mods.PartialQuantity;
+import lt.ign.apps.tax.mods.StockSplit;
 
 public class TaxReportPrinter {
 
@@ -60,32 +65,22 @@ public class TaxReportPrinter {
 				tradeRacBase.addCost(open.getFees());
 
 				var openView = new TradeView(open);
-				tradeRacOriginal.addCost(openView.inOriginalCurrency.getProceeds());
-				tradeRacOriginal.addCost(openView.inOriginalCurrency.getFees());
+				tradeRacOriginal.addCost(openView.getInOriginalCurrency().getProceeds());
+				tradeRacOriginal.addCost(openView.getInOriginalCurrency().getFees());
 
-				//var trade = open.getTrade();
-				//if (open.isFullyCovered()) {
 				print(openView);
-				//} else {
-				//	System.out.println(String.format("[%s]", trade));
-				//	var covered = open.getAmountCovered();
-				//	var total = trade.getQuantity();
-				//	var currency = trade.getCurrency();
-				//	System.out.println(String.format(Locale.ROOT, ">>> %d/%d %.2f%s %.2f%s | %.2fEUR %.2fEUR", covered, total, proceeds,
-				//			currency, fees, currency, propProceedsEur, propFeesEur));
-				//}
 			}
 
 			tradeRacBase.addRevenue(close.getProceeds());
 			tradeRacBase.addCost(close.getFees());
 
 			var closeView = new TradeView(close);
-			tradeRacOriginal.addRevenue(closeView.inOriginalCurrency.getProceeds());
-			tradeRacOriginal.addCost(closeView.inOriginalCurrency.getFees());
+			tradeRacOriginal.addRevenue(closeView.getInOriginalCurrency().getProceeds());
+			tradeRacOriginal.addCost(closeView.getInOriginalCurrency().getFees());
 
 			print(closeView);
 
-			var originalCurrency = closeView.inOriginalCurrency.getCurrency();
+			var originalCurrency = closeView.getInOriginalCurrency().getCurrency();
 			System.out.println(String.format(Locale.ROOT, "P&L: %.2f%s %.2f%s", tradeRacOriginal.profitLoss(), originalCurrency,
 				tradeRacBase.profitLoss(), baseCurrency));
 			System.out.println("----------------------------------------------------------------------------------------------------");
@@ -110,25 +105,55 @@ public class TaxReportPrinter {
 	}
 
 	private static void print(TradeView tradeView) {
-		if (tradeView.inOriginalCurrency == tradeView.trade) {
-			System.out.print(tradeView.trade);
-		} else {
-			System.out.println(String.format(Locale.ROOT, "%s | %.2f%s %.2f%s (rate: %s)", tradeView.inOriginalCurrency,
-				tradeView.trade.getProceeds(), tradeView.trade.getCurrency(), tradeView.trade.getFees(), tradeView.trade.getCurrency(),
-				tradeView.currencyConversion));
+		System.out.println(toMultiCurrencyString(tradeView));
+		if (!tradeView.nonCurrencyMods.isEmpty()) {
+			var trade = tradeView.getOriginalInBase();
+			System.out.println("^^ DERIVED FROM: " + toMultiCurrencyString(trade));
+			for (var mod : tradeView.nonCurrencyMods) {
+				var moddedTrade = trade.modify(mod);
+				if (mod instanceof PartialQuantity partial) {
+					if (partial.getType() == PartialQuantity.Type.CARRY) {
+						System.out.println(String.format("%16s %s PARTIAL COVER, QUANTITY: %d -> %d", "", mod.getDateTime(),
+							trade.getQuantity(), moddedTrade.getQuantity()));
+					}
+				} else if (mod instanceof StockSplit split) {
+					System.out.println(String.format("%16s %s STOCK SPLIT, QUANTITY: %d -> %d", "", mod.getDateTime(), trade.getQuantity(),
+						moddedTrade.getQuantity()));
+				} else {
+					throw new UnsupportedOperationException("Unrecognized modifier: " + mod.getClass().getSimpleName());
+				}
+			}
 		}
+	}
+
+	private static String toMultiCurrencyString(TradeView tradeView) {
+		if (tradeView.currencyConversion.isEmpty()) {
+			return tradeView.trade.toString();
+		} else {
+			return String.format(Locale.ROOT, "%s | %.2f%s %.2f%s (rate: %s)", tradeView.getInOriginalCurrency(),
+				tradeView.trade.getProceeds(), tradeView.trade.getCurrency(), tradeView.trade.getFees(), tradeView.trade.getCurrency(),
+				tradeView.currencyConversion.get());
+		}
+	}
+
+	private static String toMultiCurrencyString(Trade trade) {
+		return toMultiCurrencyString(new TradeView(trade));
 	}
 
 	private static class TradeView {
 		private final Trade trade;
-		private final Trade inOriginalCurrency;
-		private final CurrencyConversion currencyConversion;
+		private final Trade original;
+		private final Optional<CurrencyConversion> currencyConversion;
+		private final List<Modifier> nonCurrencyMods;
 
 		private TradeView(Trade trade) {
-			CurrencyConversion currencyConversion = null;
+			this.trade = trade;
 
-			var original = trade;
+			Trade original = trade;
+			CurrencyConversion currencyConversion = null;
+			List<Modifier> nonCurrencyMods = Collections.emptyList();
 			if (trade instanceof ModifiedTrade modded) {
+				original = modded.getOriginal();
 				var currencyConversionPartitioned = modded.getModifications().stream()
 					.collect(Collectors.partitioningBy(mod -> mod instanceof CurrencyConversion));
 
@@ -139,14 +164,31 @@ public class TaxReportPrinter {
 				}
 				if (currencyConversions.size() == 1) {
 					currencyConversion = (CurrencyConversion) currencyConversions.get(0);
-					var otherMods = currencyConversionPartitioned.get(false);
-					original = ModifiedTrade.create(modded.getOriginal(), otherMods);
+					nonCurrencyMods = currencyConversionPartitioned.get(false);
 				}
 			}
 
-			this.trade = trade;
-			this.inOriginalCurrency = original;
-			this.currencyConversion = currencyConversion;
+			this.original = original;
+			this.currencyConversion = Optional.ofNullable(currencyConversion);
+			this.nonCurrencyMods = nonCurrencyMods;
+		}
+
+		private Trade _inOriginalCurrency = null;
+
+		private Trade getInOriginalCurrency() {
+			if (_inOriginalCurrency == null) {
+				_inOriginalCurrency = ModifiedTrade.create(original, nonCurrencyMods);
+			}
+			return _inOriginalCurrency;
+		}
+
+		private Trade _originalInBase = null;
+
+		private Trade getOriginalInBase() {
+			if (_originalInBase == null) {
+				_originalInBase = ModifiedTrade.create(original, currencyConversion.map(cc -> (Modifier) cc).stream().toList());
+			}
+			return _originalInBase;
 		}
 	}
 

@@ -55,8 +55,9 @@ public class FifoTradeCoverer {
 
 						if (coverAmount < openQuantity) {
 							var tradeDateTime = trade.getDateTime();
-							uncoveredOpens.addFirst(open.modify(new PartialQuantity(tradeDateTime, openQuantity - coverAmount)));
-							opens.add(open.modify(new PartialQuantity(tradeDateTime, coverAmount)));
+							uncoveredOpens.addFirst(open.modify(new PartialQuantity(tradeDateTime, PartialQuantity.Type.CARRY,
+								openQuantity - coverAmount)));
+							opens.add(open.modify(new PartialQuantity(tradeDateTime, PartialQuantity.Type.COVER, coverAmount)));
 						} else {
 							opens.add(open);
 						}

@@ -7,11 +7,17 @@ import lt.ign.apps.tax.util.MathUtils;
 
 public class PartialQuantity extends Modifier {
 
+	private final Type type;
 	private final int targetQuantity;
 
-	public PartialQuantity(LocalDateTime dateTime, int targetQuantity) {
+	public PartialQuantity(LocalDateTime dateTime, Type type, int targetQuantity) {
 		super(dateTime);
+		this.type = type;
 		this.targetQuantity = targetQuantity;
+	}
+
+	public Type getType() {
+		return type;
 	}
 
 	public int getTargetQuantity() {
@@ -29,6 +35,10 @@ public class PartialQuantity extends Modifier {
 		var proceeds = trade.getProceeds().multiply(multiplicand);
 		var fees = trade.getFees().multiply(multiplicand);
 		return new Trade(trade.getSymbol(), trade.getDateTime(), trade.getType(), targetQuantity, proceeds, fees, trade.getCurrency());
+	}
+
+	public enum Type {
+		COVER, CARRY
 	}
 
 }
