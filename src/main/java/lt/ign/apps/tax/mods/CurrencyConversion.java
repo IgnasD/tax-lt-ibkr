@@ -2,6 +2,7 @@ package lt.ign.apps.tax.mods;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.Trade;
@@ -41,6 +42,11 @@ public class CurrencyConversion extends Modifier {
 		var proceeds = MathUtils.divide(trade.getProceeds(), conversionRate);
 		var fees = MathUtils.divide(trade.getFees(), conversionRate);
 		return new Trade(trade.getSymbol(), trade.getDateTime(), trade.getType(), trade.getQuantity(), proceeds, fees, targetCurrency);
+	}
+
+	@Override
+	public String toString() {
+		return String.format(Locale.ROOT, "%.4f %s/%s", conversionRate, sourceCurrency, targetCurrency);
 	}
 
 }

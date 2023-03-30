@@ -1,7 +1,6 @@
 package lt.ign.apps.tax.core;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -60,9 +59,9 @@ public class TaxReportPrinter {
 				tradeRacBase.addCost(open.getProceeds());
 				tradeRacBase.addCost(open.getFees());
 
-				var openView = new TradeCurrencyView(open);
-				tradeRacOriginal.addCost(openView.original.getProceeds());
-				tradeRacOriginal.addCost(openView.original.getFees());
+				var openView = new TradeView(open);
+				tradeRacOriginal.addCost(openView.inOriginalCurrency.getProceeds());
+				tradeRacOriginal.addCost(openView.inOriginalCurrency.getFees());
 
 				//var trade = open.getTrade();
 				//if (open.isFullyCovered()) {
@@ -80,13 +79,13 @@ public class TaxReportPrinter {
 			tradeRacBase.addRevenue(close.getProceeds());
 			tradeRacBase.addCost(close.getFees());
 
-			var closeView = new TradeCurrencyView(close);
-			tradeRacOriginal.addRevenue(closeView.original.getProceeds());
-			tradeRacOriginal.addCost(closeView.original.getFees());
+			var closeView = new TradeView(close);
+			tradeRacOriginal.addRevenue(closeView.inOriginalCurrency.getProceeds());
+			tradeRacOriginal.addCost(closeView.inOriginalCurrency.getFees());
 
 			print(closeView);
 
-			var originalCurrency = closeView.original.getCurrency();
+			var originalCurrency = closeView.inOriginalCurrency.getCurrency();
 			System.out.println(String.format(Locale.ROOT, "P&L: %.2f%s %.2f%s", tradeRacOriginal.profitLoss(), originalCurrency,
 				tradeRacBase.profitLoss(), baseCurrency));
 			System.out.println("----------------------------------------------------------------------------------------------------");
@@ -110,52 +109,44 @@ public class TaxReportPrinter {
 			totalRacBase.revenue, totalRacBase.profitLoss()));
 	}
 
-	private static void print(TradeCurrencyView tradeView) {
-		if (tradeView.original == tradeView.base) {
-			System.out.print(tradeView.base);
+	private static void print(TradeView tradeView) {
+		if (tradeView.inOriginalCurrency == tradeView.trade) {
+			System.out.print(tradeView.trade);
 		} else {
-			System.out.println(String.format(Locale.ROOT, "%s | %.2f%s %.2f%s (rate: %.4f %s/%s)", tradeView.original,
-				tradeView.base.getProceeds(), tradeView.base.getCurrency(), tradeView.base.getFees(), tradeView.base.getCurrency(),
-				tradeView.rate, tradeView.original.getCurrency(), tradeView.base.getCurrency()));
+			System.out.println(String.format(Locale.ROOT, "%s | %.2f%s %.2f%s (rate: %s)", tradeView.inOriginalCurrency,
+				tradeView.trade.getProceeds(), tradeView.trade.getCurrency(), tradeView.trade.getFees(), tradeView.trade.getCurrency(),
+				tradeView.currencyConversion));
 		}
 	}
 
-	private static class TradeCurrencyView {
-		private final Trade original;
-		private final Trade base;
-		private final BigDecimal rate;
+	private static class TradeView {
+		private final Trade trade;
+		private final Trade inOriginalCurrency;
+		private final CurrencyConversion currencyConversion;
 
-		private TradeCurrencyView(Trade base) {
-			var original = base;
-			BigDecimal rate = null;
-			if (base instanceof ModifiedTrade modded) {
-				var originalCurrency = modded.getOriginal().getCurrency();
-				var baseCurrency = modded.getCurrency();
-				if (originalCurrency != baseCurrency) {
-					var mods = new ArrayList<>(modded.getModifications());
-					CurrencyConversion conversion = null;
-					for (var it = mods.iterator(); it.hasNext();) {
-						var mod = it.next();
-						if (mod instanceof CurrencyConversion cc) {
-							if (cc.getSourceCurrency() == originalCurrency && cc.getTargetCurrency() == baseCurrency) {
-								conversion = cc;
-								it.remove();
-								break;
-							}
-						}
-					}
-					if (conversion == null) {
-						throw new IllegalStateException(
-							String.format("Could not find %s to %s currency conversion", originalCurrency, baseCurrency));
-					}
-					original = ModifiedTrade.create(modded.getOriginal(), mods);
-					rate = conversion.getConversionRate();
+		private TradeView(Trade trade) {
+			CurrencyConversion currencyConversion = null;
+
+			var original = trade;
+			if (trade instanceof ModifiedTrade modded) {
+				var currencyConversionPartitioned = modded.getModifications().stream()
+					.collect(Collectors.partitioningBy(mod -> mod instanceof CurrencyConversion));
+
+				var currencyConversions = currencyConversionPartitioned.get(true);
+				if (currencyConversions.size() > 1) {
+					throw new UnsupportedOperationException(
+						"Expected single currency conversion per position, got: " + currencyConversions.size());
+				}
+				if (currencyConversions.size() == 1) {
+					currencyConversion = (CurrencyConversion) currencyConversions.get(0);
+					var otherMods = currencyConversionPartitioned.get(false);
+					original = ModifiedTrade.create(modded.getOriginal(), otherMods);
 				}
 			}
 
-			this.base = base;
-			this.original = original;
-			this.rate = rate;
+			this.trade = trade;
+			this.inOriginalCurrency = original;
+			this.currencyConversion = currencyConversion;
 		}
 	}
 
