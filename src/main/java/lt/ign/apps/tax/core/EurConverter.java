@@ -38,7 +38,7 @@ public class EurConverter {
 			conversionDate = conversionDate.minusDays(1);
 		}
 
-		return trade.modify(new CurrencyConversion(Currency.USD, Currency.EUR, conversionRate));
+		return trade.modify(new CurrencyConversion(conversionDate.atStartOfDay(), Currency.USD, Currency.EUR, conversionRate));
 	}
 
 }

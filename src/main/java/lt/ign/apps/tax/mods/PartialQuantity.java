@@ -1,13 +1,16 @@
 package lt.ign.apps.tax.mods;
 
+import java.time.LocalDateTime;
+
 import lt.ign.apps.tax.model.event.Trade;
 import lt.ign.apps.tax.util.MathUtils;
 
-public class PartView implements Modifier {
+public class PartialQuantity extends Modifier {
 
 	private final int targetQuantity;
 
-	public PartView(int targetQuantity) {
+	public PartialQuantity(LocalDateTime dateTime, int targetQuantity) {
+		super(dateTime);
 		this.targetQuantity = targetQuantity;
 	}
 

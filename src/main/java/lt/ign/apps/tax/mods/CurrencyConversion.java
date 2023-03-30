@@ -1,18 +1,20 @@
 package lt.ign.apps.tax.mods;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.Trade;
 import lt.ign.apps.tax.util.MathUtils;
 
-public class CurrencyConversion implements Modifier {
+public class CurrencyConversion extends Modifier {
 
 	private final Currency sourceCurrency;
 	private final Currency targetCurrency;
 	private final BigDecimal conversionRate;
 
-	public CurrencyConversion(Currency sourceCurrency, Currency targetCurrency, BigDecimal conversionRate) {
+	public CurrencyConversion(LocalDateTime dateTime, Currency sourceCurrency, Currency targetCurrency, BigDecimal conversionRate) {
+		super(dateTime);
 		this.sourceCurrency = sourceCurrency;
 		this.targetCurrency = targetCurrency;
 		this.conversionRate = conversionRate;

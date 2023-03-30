@@ -1,12 +1,15 @@
 package lt.ign.apps.tax.mods;
 
+import java.time.LocalDateTime;
+
 import lt.ign.apps.tax.model.event.Trade;
 
-public class StockSplit implements Modifier {
+public class StockSplit extends Modifier {
 
 	private final int multiplier;
 
-	public StockSplit(int multiplier) {
+	public StockSplit(LocalDateTime dateTime, int multiplier) {
+		super(dateTime);
 		this.multiplier = multiplier;
 	}
 

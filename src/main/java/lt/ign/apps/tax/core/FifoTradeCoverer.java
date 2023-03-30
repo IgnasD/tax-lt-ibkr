@@ -10,7 +10,7 @@ import lt.ign.apps.tax.model.Cover;
 import lt.ign.apps.tax.model.event.Event;
 import lt.ign.apps.tax.model.event.Split;
 import lt.ign.apps.tax.model.event.Trade;
-import lt.ign.apps.tax.mods.PartView;
+import lt.ign.apps.tax.mods.PartialQuantity;
 import lt.ign.apps.tax.mods.StockSplit;
 
 public class FifoTradeCoverer {
@@ -33,7 +33,7 @@ public class FifoTradeCoverer {
 				throw new IllegalArgumentException("Found unexpected symbol: " + event.getSymbol());
 			}
 			if (event instanceof Split split) {
-				var splitMod = new StockSplit(split.getMultiplier());
+				var splitMod = new StockSplit(split.getDateTime(), split.getMultiplier());
 				uncoveredOpens = uncoveredOpens.stream().map(trade -> trade.modify(splitMod))
 					.collect(Collectors.toCollection(ArrayDeque::new));
 			} else if (event instanceof Trade trade) {
@@ -54,8 +54,9 @@ public class FifoTradeCoverer {
 						covered += coverAmount;
 
 						if (coverAmount < openQuantity) {
-							uncoveredOpens.addFirst(open.modify(new PartView(openQuantity - coverAmount)));
-							opens.add(open.modify(new PartView(coverAmount)));
+							var tradeDateTime = trade.getDateTime();
+							uncoveredOpens.addFirst(open.modify(new PartialQuantity(tradeDateTime, openQuantity - coverAmount)));
+							opens.add(open.modify(new PartialQuantity(tradeDateTime, coverAmount)));
 						} else {
 							opens.add(open);
 						}
