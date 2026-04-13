@@ -116,7 +116,7 @@ public class TaxReportPrinter {
 						System.out.println(String.format("%16s %s PARTIAL COVER, QUANTITY: %d -> %d", "", mod.getDateTime(),
 							trade.getQuantity(), moddedTrade.getQuantity()));
 					}
-				} else if (mod instanceof StockSplit split) {
+				} else if (mod instanceof StockSplit) {
 					System.out.println(String.format("%16s %s STOCK SPLIT, QUANTITY: %d -> %d", "", mod.getDateTime(), trade.getQuantity(),
 						moddedTrade.getQuantity()));
 				} else {
