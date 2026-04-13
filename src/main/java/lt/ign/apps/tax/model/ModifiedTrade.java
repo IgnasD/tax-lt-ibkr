@@ -1,11 +1,11 @@
-package lt.ign.apps.tax.model.event;
+package lt.ign.apps.tax.model;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import lt.ign.apps.tax.model.Currency;
+import lt.ign.apps.tax.model.event.Trade;
 import lt.ign.apps.tax.mods.Modifier;
 
 public class ModifiedTrade extends Trade {

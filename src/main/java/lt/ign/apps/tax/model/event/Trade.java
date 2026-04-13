@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 
 import lt.ign.apps.tax.model.Currency;
+import lt.ign.apps.tax.model.ModifiedTrade;
 import lt.ign.apps.tax.mods.Modifier;
 
 public class Trade extends Event {

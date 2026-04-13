@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import lt.ign.apps.tax.model.Cover;
+import lt.ign.apps.tax.model.CovererResult;
 import lt.ign.apps.tax.model.event.Event;
 import lt.ign.apps.tax.model.event.Split;
 import lt.ign.apps.tax.model.event.Trade;
@@ -21,7 +22,7 @@ public class FifoTradeCoverer {
 		this.symbol = symbol;
 	}
 
-	public List<Cover> cover(List<Event> events) {
+	public CovererResult cover(List<Event> events) {
 		var covers = new ArrayList<Cover>();
 
 		var eventQueue = events.stream().sorted(Comparator.comparing(Event::getDateTime)).collect(Collectors.toCollection(ArrayDeque::new));
@@ -72,7 +73,7 @@ public class FifoTradeCoverer {
 			}
 		}
 
-		return covers;
+		return new CovererResult(covers, new ArrayList<>(uncoveredOpens));
 	}
 
 }
