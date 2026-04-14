@@ -10,6 +10,7 @@ import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.Event;
 import lt.ign.apps.tax.parser.EcbXmlParser;
 import lt.ign.apps.tax.parser.IbkrCsvParser;
+import lt.ign.apps.tax.printer.OpenPositionsPrinter;
 import lt.ign.apps.tax.printer.TaxReportPrinter;
 
 public class App {
@@ -30,7 +31,12 @@ public class App {
 			.flatMap(r -> r.covers().stream())
 			.toList();
 
+		var uncovered = results.stream()
+			.flatMap(r -> r.uncovered().stream())
+			.toList();
+
 		new TaxReportPrinter(covers, Currency.EUR).print(System.out);
+		new OpenPositionsPrinter(uncovered, Currency.EUR).print(System.out);
 	}
 
 }
