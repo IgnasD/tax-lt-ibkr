@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 import com.opencsv.CSVReader;
 
 import lt.ign.apps.tax.model.Currency;
-import lt.ign.apps.tax.model.event.Event;
+import lt.ign.apps.tax.model.event.ReportEntry;
 import lt.ign.apps.tax.model.event.Split;
 import lt.ign.apps.tax.model.event.Trade;
 
@@ -110,10 +110,10 @@ public class IbkrCsvParser {
 		return Optional.of(new Split(symbol, dateTime, multiplier));
 	}
 
-	private static List<Event> parseFile(Path csvFile) {
+	private static List<ReportEntry> parseFile(Path csvFile) {
 		Map<String, Integer> tradesFieldMap = null;
 		Map<String, Integer> corporateActionsFieldMap = null;
-		var events = new ArrayList<Event>();
+		var events = new ArrayList<ReportEntry>();
 
 		try (var reader = new CSVReader(Files.newBufferedReader(csvFile))) {
 			String[] line;
@@ -149,7 +149,7 @@ public class IbkrCsvParser {
 		return events;
 	}
 
-	public static List<Event> parse(List<Path> csvFiles) {
+	public static List<ReportEntry> parse(List<Path> csvFiles) {
 		return csvFiles.stream().flatMap(path -> parseFile(path).stream()).toList();
 	}
 

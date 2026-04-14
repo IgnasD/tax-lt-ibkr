@@ -3,7 +3,7 @@ package lt.ign.apps.tax.model.event;
 import java.time.LocalDateTime;
 import java.util.Locale;
 
-public class Split extends Event {
+public class Split extends StockEvent {
 
 	private final int multiplier;
 

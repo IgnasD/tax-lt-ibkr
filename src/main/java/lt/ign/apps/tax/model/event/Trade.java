@@ -9,7 +9,7 @@ import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.ModifiedTrade;
 import lt.ign.apps.tax.mods.Modifier;
 
-public class Trade extends Event {
+public class Trade extends StockEvent {
 
 	private final Type type;
 	private final int quantity;
@@ -45,7 +45,7 @@ public class Trade extends Event {
 	public Currency getCurrency() {
 		return currency;
 	}
-	
+
 	public Trade modify(Modifier modifier) {
 		return ModifiedTrade.create(this, List.of(modifier));
 	}

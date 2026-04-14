@@ -5,7 +5,7 @@ import java.time.LocalDate;
 import java.util.Map;
 
 import lt.ign.apps.tax.model.Currency;
-import lt.ign.apps.tax.model.event.Event;
+import lt.ign.apps.tax.model.event.ReportEntry;
 import lt.ign.apps.tax.model.event.Trade;
 import lt.ign.apps.tax.mods.CurrencyConversion;
 
@@ -17,15 +17,15 @@ public class EurConverter {
 		this.usdEurRates = usdEurRates;
 	}
 
-	public Event convertToEur(Event event) {
-		if (!(event instanceof Trade)) {
-			return event;
+	public ReportEntry convertToEur(ReportEntry entry) {
+		if (!(entry instanceof Trade)) {
+			return entry;
 		}
 
-		var trade = (Trade) event;
+		var trade = (Trade) entry;
 		var currency = trade.getCurrency();
 		if (currency == Currency.EUR) {
-			return event;
+			return entry;
 		}
 		if (currency != Currency.USD) {
 			throw new UnsupportedOperationException(String.format("Unknown conversion rate for %s/EUR", currency));

@@ -2,12 +2,12 @@ package lt.ign.apps.tax.model.event;
 
 import java.time.LocalDateTime;
 
-public abstract class Event {
+public abstract class StockEvent extends ReportEntry {
 
 	private final String symbol;
 	private final LocalDateTime dateTime;
 
-	public Event(String symbol, LocalDateTime dateTime) {
+	public StockEvent(String symbol, LocalDateTime dateTime) {
 		this.symbol = symbol;
 		this.dateTime = dateTime;
 	}

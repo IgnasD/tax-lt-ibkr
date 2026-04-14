@@ -8,8 +8,8 @@ import java.util.stream.Collectors;
 
 import lt.ign.apps.tax.model.Cover;
 import lt.ign.apps.tax.model.CovererResult;
-import lt.ign.apps.tax.model.event.Event;
 import lt.ign.apps.tax.model.event.Split;
+import lt.ign.apps.tax.model.event.StockEvent;
 import lt.ign.apps.tax.model.event.Trade;
 import lt.ign.apps.tax.mods.PartialQuantity;
 import lt.ign.apps.tax.mods.StockSplit;
@@ -22,10 +22,11 @@ public class FifoTradeCoverer {
 		this.symbol = symbol;
 	}
 
-	public CovererResult cover(List<Event> events) {
+	public CovererResult cover(List<StockEvent> events) {
 		var covers = new ArrayList<Cover>();
 
-		var eventQueue = events.stream().sorted(Comparator.comparing(Event::getDateTime)).collect(Collectors.toCollection(ArrayDeque::new));
+		var eventQueue = events.stream().sorted(Comparator.comparing(StockEvent::getDateTime))
+			.collect(Collectors.toCollection(ArrayDeque::new));
 		var uncoveredOpens = new ArrayDeque<Trade>();
 
 		while (!eventQueue.isEmpty()) {
