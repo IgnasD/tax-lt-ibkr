@@ -91,12 +91,17 @@ public class TaxReportPrinter {
 		totalRacPerCurrency.entrySet().forEach(e -> {
 			var currency = e.getKey();
 			var rac = e.getValue();
-			ps.println(String.format(Locale.ROOT, "%s. Cost: %.2f%s; Revenue: %.2f%s; P&L: %.2f%s", currency, rac.cost, currency,
-				rac.revenue, currency, rac.profitLoss(), currency));
+			ps.println(String.format(Locale.ROOT, "%s. Cost: %.2f%s; Revenue: %.2f%s; P&L: %.2f%s",
+				currency,
+				rac.cost, currency,
+				rac.revenue, currency,
+				rac.profitLoss(), currency));
 		});
 
-		ps.println(String.format(Locale.ROOT, "TOTAL. Cost: %.2fEUR; Revenue: %.2fEUR; P&L: %.2fEUR", totalRacBase.cost,
-			totalRacBase.revenue, totalRacBase.profitLoss()));
+		ps.println(String.format(Locale.ROOT, "TOTAL. Cost: %.2f%s; Revenue: %.2f%s; P&L: %.2f%s",
+			totalRacBase.cost, baseCurrency,
+			totalRacBase.revenue, baseCurrency,
+			totalRacBase.profitLoss(), baseCurrency));
 	}
 
 	private static class RevenueAndCost {
