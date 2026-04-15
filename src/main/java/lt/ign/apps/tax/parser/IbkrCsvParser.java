@@ -3,6 +3,7 @@ package lt.ign.apps.tax.parser;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import java.util.regex.Pattern;
 import com.opencsv.CSVReader;
 
 import lt.ign.apps.tax.model.Currency;
+import lt.ign.apps.tax.model.event.DepositWithdrawal;
 import lt.ign.apps.tax.model.event.ReportEntry;
 import lt.ign.apps.tax.model.event.Split;
 import lt.ign.apps.tax.model.event.Trade;
@@ -24,6 +26,7 @@ public class IbkrCsvParser {
 
 	private static final String SECTION_TRADES = "Trades";
 	private static final String SECTION_CORPORATE_ACTIONS = "Corporate Actions";
+	private static final String SECTION_DEPOSITS_WITHDRAWALS = "Deposits & Withdrawals";
 
 	private static final String LINE_HEADER = "Header";
 	private static final String LINE_DATA = "Data";
@@ -40,11 +43,14 @@ public class IbkrCsvParser {
 	private static final String HEADER_COMM_FEE = "Comm/Fee";
 	private static final String HEADER_REALIZED_PL = "Realized P/L";
 	private static final String HEADER_CODE = "Code";
+	private static final String HEADER_SETTLE_DATE = "Settle Date";
+	private static final String HEADER_AMOUNT = "Amount";
 
 	private static final String DATA_DISCRIMINATOR_ORDER = "Order";
-
 	private static final String ASSET_CATEGORY_STOCKS = "Stocks";
+	private static final String DESCRIPTION_ELECTRONIC_FUND_TRANSFER = "Electronic Fund Transfer";
 
+	private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 	private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd, HH:mm:ss");
 	private static final Pattern splitPattern = Pattern.compile("^([a-zA-Z]+?)\\([A-Za-z0-9]+?\\) Split ([0-9]+?) for ([0-9]+?) ");
 
@@ -111,6 +117,18 @@ public class IbkrCsvParser {
 		return Optional.of(new Split(symbol, dateTime, multiplier));
 	}
 
+	private static Optional<DepositWithdrawal> parseDepositsWithdrawals(String[] line, Map<String, Integer> fieldMap) {
+		if (!line[fieldMap.get(HEADER_DESCRIPTION)].equals(DESCRIPTION_ELECTRONIC_FUND_TRANSFER)) {
+			return Optional.empty();
+		}
+
+		var currency = Currency.valueOf(line[fieldMap.get(HEADER_CURRENCY)]);
+		var date = LocalDate.parse(line[fieldMap.get(HEADER_SETTLE_DATE)], dateFormatter);
+		var amount = new BigDecimal(line[fieldMap.get(HEADER_AMOUNT)]);
+
+		return Optional.of(new DepositWithdrawal(currency, date, amount));
+	}
+
 	private static List<ReportEntry> parseFile(Path csvFile) {
 		var entries = new ArrayList<ReportEntry>();
 
@@ -123,6 +141,7 @@ public class IbkrCsvParser {
 					switch (line[0]) {
 					case SECTION_TRADES:
 					case SECTION_CORPORATE_ACTIONS:
+					case SECTION_DEPOSITS_WITHDRAWALS:
 						fieldMaps.put(line[0], genFieldMap(line));
 						break;
 					}
@@ -131,6 +150,7 @@ public class IbkrCsvParser {
 					entry = switch (line[0]) {
 					case SECTION_TRADES -> parseTrade(line, fieldMaps.get(line[0]));
 					case SECTION_CORPORATE_ACTIONS -> parseCorporateAction(line, fieldMaps.get(line[0]));
+					case SECTION_DEPOSITS_WITHDRAWALS -> parseDepositsWithdrawals(line, fieldMaps.get(line[0]));
 					default -> Optional.empty();
 					};
 				}

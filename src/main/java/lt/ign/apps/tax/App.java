@@ -7,9 +7,11 @@ import java.util.stream.Stream;
 import lt.ign.apps.tax.core.EurConverter;
 import lt.ign.apps.tax.core.FifoTradeCoverer;
 import lt.ign.apps.tax.model.Currency;
+import lt.ign.apps.tax.model.event.DepositWithdrawal;
 import lt.ign.apps.tax.model.event.StockEvent;
 import lt.ign.apps.tax.parser.EcbXmlParser;
 import lt.ign.apps.tax.parser.IbkrCsvParser;
+import lt.ign.apps.tax.printer.DepositsWithdrawalsPrinter;
 import lt.ign.apps.tax.printer.OpenPositionsPrinter;
 import lt.ign.apps.tax.printer.TaxReportPrinter;
 
@@ -25,23 +27,29 @@ public class App {
 			.map(eurConverter::convertToEur)
 			.toList();
 
-		var results = entries.stream()
+		var covererResults = entries.stream()
 			.filter(e -> e instanceof StockEvent)
 			.map(e -> (StockEvent) e)
 			.collect(Collectors.groupingBy(StockEvent::getSymbol)).entrySet().stream()
 			.map(entry -> new FifoTradeCoverer(entry.getKey()).cover(entry.getValue()))
 			.toList();
 
-		var covers = results.stream()
+		var covers = covererResults.stream()
 			.flatMap(r -> r.covers().stream())
 			.toList();
 
-		var uncovered = results.stream()
+		var uncovered = covererResults.stream()
 			.flatMap(r -> r.uncovered().stream())
+			.toList();
+
+		var depositsWithdrawals = entries.stream()
+			.filter(e -> e instanceof DepositWithdrawal)
+			.map(e -> (DepositWithdrawal) e)
 			.toList();
 
 		new TaxReportPrinter(covers, Currency.EUR).print(System.out);
 		new OpenPositionsPrinter(uncovered, Currency.EUR).print(System.out);
+		new DepositsWithdrawalsPrinter(depositsWithdrawals).print(System.out);
 	}
 
 }
