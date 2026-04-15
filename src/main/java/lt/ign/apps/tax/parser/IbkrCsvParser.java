@@ -41,9 +41,9 @@ public class IbkrCsvParser {
 	private static final String HEADER_REALIZED_PL = "Realized P/L";
 	private static final String HEADER_CODE = "Code";
 
-	private static final String DATA_ORDER = "Order";
+	private static final String DATA_DISCRIMINATOR_ORDER = "Order";
 
-	private static final String ASSET_STOCKS = "Stocks";
+	private static final String ASSET_CATEGORY_STOCKS = "Stocks";
 
 	private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd, HH:mm:ss");
 	private static final Pattern splitPattern = Pattern.compile("^([a-zA-Z]+?)\\([A-Za-z0-9]+?\\) Split ([0-9]+?) for ([0-9]+?) ");
@@ -70,8 +70,8 @@ public class IbkrCsvParser {
 	}
 
 	private static Optional<Trade> parseTrade(String[] line, Map<String, Integer> fieldMap) {
-		if (!line[fieldMap.get(HEADER_DATA_DISCRIMINATOR)].equals(DATA_ORDER)
-			|| !line[fieldMap.get(HEADER_ASSET_CATEGORY)].equals(ASSET_STOCKS)) {
+		if (!line[fieldMap.get(HEADER_DATA_DISCRIMINATOR)].equals(DATA_DISCRIMINATOR_ORDER)
+			|| !line[fieldMap.get(HEADER_ASSET_CATEGORY)].equals(ASSET_CATEGORY_STOCKS)) {
 			return Optional.empty();
 		}
 
@@ -82,11 +82,12 @@ public class IbkrCsvParser {
 		var proceeds = new BigDecimal(line[fieldMap.get(HEADER_PROCEEDS)]);
 		var fees = new BigDecimal(line[fieldMap.get(HEADER_COMM_FEE)]);
 		var type = parseTradeType(line[fieldMap.get(HEADER_CODE)]);
+
 		return Optional.of(new Trade(symbol, dateTime, type, quantity, proceeds, fees, currency));
 	}
 
-	private static Optional<Split> parseSplit(String[] line, Map<String, Integer> fieldMap) {
-		if (!line[fieldMap.get(HEADER_ASSET_CATEGORY)].equals(ASSET_STOCKS)) {
+	private static Optional<Split> parseCorporateAction(String[] line, Map<String, Integer> fieldMap) {
+		if (!line[fieldMap.get(HEADER_ASSET_CATEGORY)].equals(ASSET_CATEGORY_STOCKS)) {
 			return Optional.empty();
 		}
 
@@ -136,7 +137,7 @@ public class IbkrCsvParser {
 						continue;
 					}
 					if (line[1].equals(LINE_DATA)) {
-						var split = parseSplit(line, corporateActionsFieldMap);
+						var split = parseCorporateAction(line, corporateActionsFieldMap);
 						split.ifPresent(events::add);
 						continue;
 					}
