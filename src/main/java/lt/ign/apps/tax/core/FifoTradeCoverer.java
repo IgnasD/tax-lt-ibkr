@@ -7,6 +7,7 @@ import java.util.List;
 
 import lt.ign.apps.tax.model.Cover;
 import lt.ign.apps.tax.model.CovererResult;
+import lt.ign.apps.tax.model.event.Dividends;
 import lt.ign.apps.tax.model.event.Split;
 import lt.ign.apps.tax.model.event.StockEvent;
 import lt.ign.apps.tax.model.event.Trade;
@@ -67,6 +68,8 @@ public class FifoTradeCoverer {
 				}
 				default -> throw new UnsupportedOperationException("Unknown trade type " + trade.getType());
 				}
+			} else if (event instanceof Dividends) {
+				// does not change position
 			} else {
 				throw new UnsupportedOperationException("Unknown event type " + event.getClass().getSimpleName());
 			}
