@@ -112,42 +112,36 @@ public class IbkrCsvParser {
 	}
 
 	private static List<ReportEntry> parseFile(Path csvFile) {
-		Map<String, Integer> tradesFieldMap = null;
-		Map<String, Integer> corporateActionsFieldMap = null;
-		var events = new ArrayList<ReportEntry>();
+		var entries = new ArrayList<ReportEntry>();
 
+		var fieldMaps = new HashMap<String, Map<String, Integer>>();
 		try (var reader = new CSVReader(Files.newBufferedReader(csvFile))) {
-			String[] line;
-			while ((line = reader.readNext()) != null) {
-				if (line[0].equals(SECTION_TRADES)) {
-					if (line[1].equals(LINE_HEADER)) {
-						tradesFieldMap = genFieldMap(line);
-						continue;
-					}
-					if (line[1].equals(LINE_DATA)) {
-						var trade = parseTrade(line, tradesFieldMap);
-						trade.ifPresent(events::add);
-						continue;
+			for (String[] line; (line = reader.readNext()) != null;) {
+				Optional<? extends ReportEntry> entry = Optional.empty();
+				switch (line[1]) {
+				case LINE_HEADER -> {
+					switch (line[0]) {
+					case SECTION_TRADES:
+					case SECTION_CORPORATE_ACTIONS:
+						fieldMaps.put(line[0], genFieldMap(line));
+						break;
 					}
 				}
-
-				if (line[0].equals(SECTION_CORPORATE_ACTIONS)) {
-					if (line[1].equals(LINE_HEADER)) {
-						corporateActionsFieldMap = genFieldMap(line);
-						continue;
-					}
-					if (line[1].equals(LINE_DATA)) {
-						var split = parseCorporateAction(line, corporateActionsFieldMap);
-						split.ifPresent(events::add);
-						continue;
-					}
+				case LINE_DATA -> {
+					entry = switch (line[0]) {
+					case SECTION_TRADES -> parseTrade(line, fieldMaps.get(line[0]));
+					case SECTION_CORPORATE_ACTIONS -> parseCorporateAction(line, fieldMaps.get(line[0]));
+					default -> Optional.empty();
+					};
 				}
+				}
+				entry.ifPresent(entries::add);
 			}
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 
-		return events;
+		return entries;
 	}
 
 	public static List<ReportEntry> parse(List<Path> csvFiles) {
