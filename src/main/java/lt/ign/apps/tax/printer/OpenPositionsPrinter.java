@@ -25,7 +25,7 @@ public class OpenPositionsPrinter {
 		var totalInBaseCurrency = new ProceedsAndFees();
 		var totalPerCurrency = new TreeMap<Currency, ProceedsAndFees>();
 
-		var opensPerSymbol = uncovered.stream().collect(Collectors.groupingBy(t -> t.getSymbol()));
+		var opensPerSymbol = uncovered.stream().collect(Collectors.groupingBy(Trade::getSymbol));
 		ps.println("====================================================================================================");
 		ps.println("Open positions");
 		ps.println("----------------------------------------------------------------------------------------------------");

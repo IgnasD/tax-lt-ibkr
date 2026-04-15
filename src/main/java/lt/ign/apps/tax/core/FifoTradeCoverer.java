@@ -4,7 +4,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import lt.ign.apps.tax.model.Cover;
 import lt.ign.apps.tax.model.CovererResult;
@@ -24,20 +23,19 @@ public class FifoTradeCoverer {
 
 	public CovererResult cover(List<StockEvent> events) {
 		var covers = new ArrayList<Cover>();
-
-		var eventQueue = events.stream().sorted(Comparator.comparing(StockEvent::getDateTime))
-			.collect(Collectors.toCollection(ArrayDeque::new));
 		var uncoveredOpens = new ArrayDeque<Trade>();
 
-		while (!eventQueue.isEmpty()) {
-			var event = eventQueue.poll();
+		events.stream().sorted(Comparator.comparing(StockEvent::getDateTime)).forEach(event -> {
 			if (!event.getSymbol().equals(symbol)) {
 				throw new IllegalArgumentException("Found unexpected symbol: " + event.getSymbol());
 			}
 			if (event instanceof Split split) {
 				var splitMod = new StockSplit(split.getDateTime(), split.getMultiplier());
-				uncoveredOpens = uncoveredOpens.stream().map(trade -> trade.modify(splitMod))
-					.collect(Collectors.toCollection(ArrayDeque::new));
+				for (int i = 0, l = uncoveredOpens.size(); i < l; i++) {
+					var trade = uncoveredOpens.remove();
+					trade = trade.modify(splitMod);
+					uncoveredOpens.add(trade);
+				}
 			} else if (event instanceof Trade trade) {
 				switch (trade.getType()) {
 				case OPEN -> {
@@ -72,7 +70,7 @@ public class FifoTradeCoverer {
 			} else {
 				throw new UnsupportedOperationException("Unknown event type " + event.getClass().getSimpleName());
 			}
-		}
+		});
 
 		return new CovererResult(covers, new ArrayList<>(uncoveredOpens));
 	}
