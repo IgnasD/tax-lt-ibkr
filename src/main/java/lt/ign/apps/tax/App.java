@@ -4,7 +4,7 @@ import java.nio.file.Paths;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import lt.ign.apps.tax.core.EurConverter;
+import lt.ign.apps.tax.core.CurrencyConverter;
 import lt.ign.apps.tax.core.FifoTradeCoverer;
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.DepositWithdrawal;
@@ -21,11 +21,9 @@ public class App {
 		var csvFiles = Stream.of(args).map(Paths::get).toList();
 
 		var usdEurRates = EcbXmlParser.forCurrency(Currency.USD).parseRates();
-		var eurConverter = new EurConverter(usdEurRates);
+		var currencyConverter = new CurrencyConverter(usdEurRates);
 
-		var entries = IbkrCsvParser.parse(csvFiles).stream()
-			.map(eurConverter::convertToEur)
-			.toList();
+		var entries = IbkrCsvParser.parse(csvFiles);
 
 		var covererResults = entries.stream()
 			.filter(e -> e instanceof StockEvent)
@@ -47,8 +45,8 @@ public class App {
 			.map(e -> (DepositWithdrawal) e)
 			.toList();
 
-		new TaxReportPrinter(covers, Currency.EUR).print(System.out);
-		new OpenPositionsPrinter(uncovered, Currency.EUR).print(System.out);
+		new TaxReportPrinter(covers, Currency.EUR, currencyConverter).print(System.out);
+		new OpenPositionsPrinter(uncovered, Currency.EUR, currencyConverter).print(System.out);
 		new DepositsWithdrawalsPrinter(depositsWithdrawals).print(System.out);
 	}
 

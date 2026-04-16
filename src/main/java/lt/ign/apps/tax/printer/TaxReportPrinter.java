@@ -8,18 +8,21 @@ import java.util.Locale;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+import lt.ign.apps.tax.core.CurrencyConverter;
 import lt.ign.apps.tax.model.Cover;
 import lt.ign.apps.tax.model.Currency;
-import lt.ign.apps.tax.model.TradeCurrencyView;
+import lt.ign.apps.tax.model.event.Trade;
 
 public class TaxReportPrinter {
 
 	private final List<Cover> covers;
 	private final Currency baseCurrency;
+	private final CurrencyConverter currencyConverter;
 
-	public TaxReportPrinter(List<Cover> covers, Currency baseCurrency) {
+	public TaxReportPrinter(List<Cover> covers, Currency baseCurrency, CurrencyConverter currencyConverter) {
 		this.covers = covers;
 		this.baseCurrency = baseCurrency;
+		this.currencyConverter = currencyConverter;
 	}
 
 	public void print(PrintStream ps) {
@@ -35,57 +38,54 @@ public class TaxReportPrinter {
 	}
 
 	private void printInternal(List<Cover> covers, PrintStream ps) {
-		var totalRacBase = new RevenueAndCost();
+		var totalRacInBase = new RevenueAndCost();
 		var totalRacPerCurrency = new TreeMap<Currency, RevenueAndCost>();
 
 		for (var cover : covers) {
-			var tradeRacBase = new RevenueAndCost();
-			var tradeRacOriginal = new RevenueAndCost();
+			var tradeRacInBase = new RevenueAndCost();
+			var tradeRacInOriginal = new RevenueAndCost();
 
-			var close = cover.close();
-			if (close.getCurrency() != baseCurrency) {
-				throw new UnsupportedOperationException(String
-					.format("Expected base currency (%s) does not match close trade currency (%s)", baseCurrency, close.getCurrency()));
-			}
+			var closeInOriginal = cover.close();
+			var closeInBase = tradeInBase(closeInOriginal);
 
-			ps.println(close.getSymbol());
+			ps.println(closeInOriginal.getSymbol());
 
-			for (var open : cover.opens()) {
-				if (open.getCurrency() != baseCurrency) {
-					throw new UnsupportedOperationException(String
-						.format("Expected base currency (%s) does not match open trade currency (%s)", baseCurrency, open.getCurrency()));
+			for (var openInOriginal : cover.opens()) {
+				if (openInOriginal.getCurrency() != closeInOriginal.getCurrency()) {
+					throw new IllegalStateException(String.format("Open trade currency (%s) does not match close trade currency (%s)",
+						openInOriginal.getCurrency(), closeInOriginal.getCurrency()));
 				}
 
-				tradeRacBase.addCost(open.getProceeds());
-				tradeRacBase.addCost(open.getFees());
+				tradeRacInOriginal.addCost(openInOriginal.getProceeds());
+				tradeRacInOriginal.addCost(openInOriginal.getFees());
 
-				var openInOriginalCurrency = new TradeCurrencyView(open).getInOriginalCurrency();
-				tradeRacOriginal.addCost(openInOriginalCurrency.getProceeds());
-				tradeRacOriginal.addCost(openInOriginalCurrency.getFees());
+				var openInBase = tradeInBase(openInOriginal);
+				tradeRacInBase.addCost(openInBase.getProceeds());
+				tradeRacInBase.addCost(openInBase.getFees());
 
-				new TradePrinter(open).print(ps);
+				new TradePrinter(openInOriginal, baseCurrency, currencyConverter).print(ps);
 			}
 
-			tradeRacBase.addRevenue(close.getProceeds());
-			tradeRacBase.addCost(close.getFees());
+			tradeRacInOriginal.addRevenue(closeInOriginal.getProceeds());
+			tradeRacInOriginal.addCost(closeInOriginal.getFees());
 
-			var closeInOriginalCurrency = new TradeCurrencyView(close).getInOriginalCurrency();
-			tradeRacOriginal.addRevenue(closeInOriginalCurrency.getProceeds());
-			tradeRacOriginal.addCost(closeInOriginalCurrency.getFees());
+			tradeRacInBase.addRevenue(closeInBase.getProceeds());
+			tradeRacInBase.addCost(closeInBase.getFees());
 
-			new TradePrinter(close).print(ps);
+			new TradePrinter(closeInOriginal, baseCurrency, currencyConverter).print(ps);
 
-			var originalCurrency = closeInOriginalCurrency.getCurrency();
-			ps.println(String.format(Locale.ROOT, "P&L: %.2f%s %.2f%s", tradeRacOriginal.profitLoss(), originalCurrency,
-				tradeRacBase.profitLoss(), baseCurrency));
+			var originalCurrency = closeInOriginal.getCurrency();
+			ps.println(String.format(Locale.ROOT, "P&L: %.2f%s %.2f%s",
+				tradeRacInOriginal.profitLoss(), originalCurrency,
+				tradeRacInBase.profitLoss(), baseCurrency));
 			ps.println("----------------------------------------------------------------------------------------------------");
 
-			totalRacPerCurrency.merge(originalCurrency, tradeRacOriginal, (a, b) -> {
+			totalRacPerCurrency.merge(originalCurrency, tradeRacInOriginal, (a, b) -> {
 				a.addRevenueAndCost(b);
 				return a;
 			});
 
-			totalRacBase.addRevenueAndCost(tradeRacBase);
+			totalRacInBase.addRevenueAndCost(tradeRacInBase);
 		}
 
 		totalRacPerCurrency.entrySet().forEach(e -> {
@@ -99,9 +99,16 @@ public class TaxReportPrinter {
 		});
 
 		ps.println(String.format(Locale.ROOT, "TOTAL. Cost: %.2f%s; Revenue: %.2f%s; P&L: %.2f%s",
-			totalRacBase.cost, baseCurrency,
-			totalRacBase.revenue, baseCurrency,
-			totalRacBase.profitLoss(), baseCurrency));
+			totalRacInBase.cost, baseCurrency,
+			totalRacInBase.revenue, baseCurrency,
+			totalRacInBase.profitLoss(), baseCurrency));
+	}
+
+	private Trade tradeInBase(Trade trade) {
+		if (trade.getCurrency() == baseCurrency) {
+			return trade;
+		}
+		return currencyConverter.convert(trade, baseCurrency);
 	}
 
 	private static class RevenueAndCost {

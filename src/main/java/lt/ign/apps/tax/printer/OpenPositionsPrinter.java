@@ -7,22 +7,24 @@ import java.util.Locale;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+import lt.ign.apps.tax.core.CurrencyConverter;
 import lt.ign.apps.tax.model.Currency;
-import lt.ign.apps.tax.model.TradeCurrencyView;
 import lt.ign.apps.tax.model.event.Trade;
 
 public class OpenPositionsPrinter {
 
 	private final List<Trade> uncovered;
 	private final Currency baseCurrency;
+	private final CurrencyConverter currencyConverter;
 
-	public OpenPositionsPrinter(List<Trade> uncovered, Currency baseCurrency) {
+	public OpenPositionsPrinter(List<Trade> uncovered, Currency baseCurrency, CurrencyConverter currencyConverter) {
 		this.uncovered = uncovered;
 		this.baseCurrency = baseCurrency;
+		this.currencyConverter = currencyConverter;
 	}
 
 	public void print(PrintStream ps) {
-		var totalInBaseCurrency = new ProceedsAndFees();
+		var totalInBase = new ProceedsAndFees();
 		var totalPerCurrency = new TreeMap<Currency, ProceedsAndFees>();
 
 		var opensPerSymbol = uncovered.stream().collect(Collectors.groupingBy(Trade::getSymbol));
@@ -35,50 +37,45 @@ public class OpenPositionsPrinter {
 
 			ps.println(symbol);
 
-			var positionInBaseCurrency = new ProceedsAndFees();
-			var positionInOriginalCurrency = new ProceedsAndFees();
+			var positionInBase = new ProceedsAndFees();
+			var positionInOriginal = new ProceedsAndFees();
 
 			Currency originalCurrency = null;
 
-			for (var open : symbolOpens.getValue()) {
-				if (open.getCurrency() != baseCurrency) {
-					throw new IllegalStateException(String.format("Expected base currency (%s) does not match open trade currency (%s)",
-						baseCurrency, open.getCurrency()));
-				}
-
-				positionInBaseCurrency.addProceeds(open.getProceeds());
-				positionInBaseCurrency.addFees(open.getFees());
-
-				var openInOriginalCurrency = new TradeCurrencyView(open).getInOriginalCurrency();
-				positionInOriginalCurrency.addProceeds(openInOriginalCurrency.getProceeds());
-				positionInOriginalCurrency.addFees(openInOriginalCurrency.getFees());
-
+			for (var openInOriginal : symbolOpens.getValue()) {
 				if (originalCurrency == null) {
-					originalCurrency = openInOriginalCurrency.getCurrency();
-				} else if (originalCurrency != openInOriginalCurrency.getCurrency()) {
+					originalCurrency = openInOriginal.getCurrency();
+				} else if (originalCurrency != openInOriginal.getCurrency()) {
 					throw new IllegalStateException(String.format("Position currency changed (%s -> %s)", originalCurrency,
-						openInOriginalCurrency.getCurrency()));
+						openInOriginal.getCurrency()));
 				}
 
-				new TradePrinter(open).print(ps);
+				positionInOriginal.addProceeds(openInOriginal.getProceeds());
+				positionInOriginal.addFees(openInOriginal.getFees());
+
+				var openInBase = tradeInBase(openInOriginal);
+				positionInBase.addProceeds(openInBase.getProceeds());
+				positionInBase.addFees(openInBase.getFees());
+
+				new TradePrinter(openInOriginal, baseCurrency, currencyConverter).print(ps);
 			}
 
 			ps.print(String.format(Locale.ROOT, "%s POSITION: %.2f%s + %.2f%s = %.2f%s",
 				symbol,
-				positionInOriginalCurrency.proceeds, originalCurrency,
-				positionInOriginalCurrency.fees, originalCurrency,
-				positionInOriginalCurrency.total(), originalCurrency));
+				positionInOriginal.proceeds, originalCurrency,
+				positionInOriginal.fees, originalCurrency,
+				positionInOriginal.total(), originalCurrency));
 			if (baseCurrency != originalCurrency) {
 				ps.print(String.format(Locale.ROOT, " | %.2f%s + %.2f%s = %.2f%s",
-					positionInBaseCurrency.proceeds, baseCurrency,
-					positionInBaseCurrency.fees, baseCurrency,
-					positionInBaseCurrency.total(), baseCurrency));
+					positionInBase.proceeds, baseCurrency,
+					positionInBase.fees, baseCurrency,
+					positionInBase.total(), baseCurrency));
 			}
 			ps.println();
 			ps.println("----------------------------------------------------------------------------------------------------");
 
-			totalInBaseCurrency.add(positionInBaseCurrency);
-			totalPerCurrency.merge(originalCurrency, positionInOriginalCurrency, (a, b) -> {
+			totalInBase.add(positionInBase);
+			totalPerCurrency.merge(originalCurrency, positionInOriginal, (a, b) -> {
 				a.add(b);
 				return a;
 			});
@@ -95,11 +92,18 @@ public class OpenPositionsPrinter {
 		});
 
 		ps.println(String.format(Locale.ROOT, "TOTAL. Proceeds: %.2f%s; Fees: %.2f%s; Total: %.2f%s",
-			totalInBaseCurrency.proceeds, baseCurrency,
-			totalInBaseCurrency.fees, baseCurrency,
-			totalInBaseCurrency.total(), baseCurrency));
+			totalInBase.proceeds, baseCurrency,
+			totalInBase.fees, baseCurrency,
+			totalInBase.total(), baseCurrency));
 
 		ps.println("====================================================================================================");
+	}
+
+	private Trade tradeInBase(Trade trade) {
+		if (trade.getCurrency() == baseCurrency) {
+			return trade;
+		}
+		return currencyConverter.convert(trade, baseCurrency);
 	}
 
 	private static class ProceedsAndFees {
