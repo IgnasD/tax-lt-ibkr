@@ -20,17 +20,20 @@ import com.opencsv.exceptions.CsvException;
 
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.DepositWithdrawal;
+import lt.ign.apps.tax.model.event.DividendEvent;
 import lt.ign.apps.tax.model.event.Dividends;
 import lt.ign.apps.tax.model.event.ReportEntry;
 import lt.ign.apps.tax.model.event.Split;
 import lt.ign.apps.tax.model.event.Trade;
+import lt.ign.apps.tax.model.event.WithholdingTax;
 
 public class IbkrCsvParser {
 
 	private static final String SECTION_TRADES = "Trades";
 	private static final String SECTION_CORPORATE_ACTIONS = "Corporate Actions";
 	private static final String SECTION_DEPOSITS_WITHDRAWALS = "Deposits & Withdrawals";
-	private static final String SECTION_CHANGE_IN_DIVIDEND_ACCRUALS = "Change in Dividend Accruals";
+	private static final String SECTION_DIVIDENDS = "Dividends";
+	private static final String SECTION_WITHHOLDING_TAX = "Withholding Tax";
 
 	private static final String LINE_HEADER = "Header";
 	private static final String LINE_DATA = "Data";
@@ -49,19 +52,19 @@ public class IbkrCsvParser {
 	private static final String HEADER_CODE = "Code";
 	private static final String HEADER_SETTLE_DATE = "Settle Date";
 	private static final String HEADER_AMOUNT = "Amount";
-	private static final String HEADER_PAY_DATE = "Pay Date";
-	private static final String HEADER_TAX = "Tax";
-	private static final String HEADER_GROSS_AMOUNT = "Gross Amount";
-	private static final String HEADER_NET_AMOUNT = "Net Amount";
+	private static final String HEADER_DATE = "Date";
+
+	private static final String DESCRIPTION_ELECTRONIC_FUND_TRANSFER = "Electronic Fund Transfer";
+	private static final String DESCRIPTION_CASH_DIVIDEND = "Cash Dividend";
 
 	private static final String DATA_DISCRIMINATOR_ORDER = "Order";
 	private static final String ASSET_CATEGORY_STOCKS = "Stocks";
-	private static final String DESCRIPTION_ELECTRONIC_FUND_TRANSFER = "Electronic Fund Transfer";
-	private static final String CODE_RE = "Re";
+	private static final String CURRENCY_TOTAL = "Total";
 
 	private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 	private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd, HH:mm:ss");
 	private static final Pattern splitPattern = Pattern.compile("^([a-zA-Z]+?)\\([A-Za-z0-9]+?\\) Split ([0-9]+?) for ([0-9]+?) ");
+	private static final Pattern dividendsPattern = Pattern.compile("^([a-zA-Z]+?) ?\\([A-Za-z0-9]+?\\) (Cash Dividend|Payment in Lieu) ");
 
 	private static Map<String, Integer> genFieldMap(String[] fields) {
 		var fieldMap = new HashMap<String, Integer>();
@@ -138,21 +141,32 @@ public class IbkrCsvParser {
 		return Optional.of(new DepositWithdrawal(currency, date, amount));
 	}
 
-	private static Optional<Dividends> parseChangeInDividendAccruals(String[] line, Map<String, Integer> fieldMap) {
-		if (!line[fieldMap.get(HEADER_ASSET_CATEGORY)].equals(ASSET_CATEGORY_STOCKS)
-			|| !line[fieldMap.get(HEADER_CODE)].equals(CODE_RE)
-			|| line[fieldMap.get(HEADER_PAY_DATE)].equals("-")) {
+	@FunctionalInterface
+	private interface DividendEventConstructor {
+		DividendEvent construct(String symbol, LocalDateTime dateTime, Currency currency, BigDecimal amount);
+	}
+
+	private static Optional<DividendEvent> parseDividendEvent(String[] line, Map<String, Integer> fieldMap,
+		DividendEventConstructor constructor) {
+		if (line[fieldMap.get(HEADER_CURRENCY)].startsWith(CURRENCY_TOTAL)) {
+			return Optional.empty();
+		}
+
+		var matcher = dividendsPattern.matcher(line[fieldMap.get(HEADER_DESCRIPTION)]);
+		if (!matcher.find()) {
+			throw new UnsupportedOperationException("Unknown dividends pattern: " + Arrays.toString(line));
+		}
+		if (!matcher.group(2).equals(DESCRIPTION_CASH_DIVIDEND)) {
 			return Optional.empty();
 		}
 
 		var currency = Currency.valueOf(line[fieldMap.get(HEADER_CURRENCY)]);
-		var symbol = line[fieldMap.get(HEADER_SYMBOL)];
-		var date = LocalDate.parse(line[fieldMap.get(HEADER_PAY_DATE)], dateFormatter);
-		var tax = new BigDecimal(line[fieldMap.get(HEADER_TAX)]);
-		var gross = new BigDecimal(line[fieldMap.get(HEADER_GROSS_AMOUNT)]);
-		var net = new BigDecimal(line[fieldMap.get(HEADER_NET_AMOUNT)]);
+		var date = LocalDate.parse(line[fieldMap.get(HEADER_DATE)], dateFormatter);
+		var amount = new BigDecimal(line[fieldMap.get(HEADER_AMOUNT)]);
 
-		return Optional.of(new Dividends(symbol, date.atStartOfDay(), currency, tax, gross, net));
+		var symbol = matcher.group(1);
+
+		return Optional.of(constructor.construct(symbol, date.atStartOfDay(), currency, amount));
 	}
 
 	private static List<ReportEntry> parseFile(Path csvFile) {
@@ -168,7 +182,8 @@ public class IbkrCsvParser {
 					case SECTION_TRADES:
 					case SECTION_CORPORATE_ACTIONS:
 					case SECTION_DEPOSITS_WITHDRAWALS:
-					case SECTION_CHANGE_IN_DIVIDEND_ACCRUALS:
+					case SECTION_DIVIDENDS:
+					case SECTION_WITHHOLDING_TAX:
 						fieldMaps.put(line[0], genFieldMap(line));
 						break;
 					}
@@ -178,7 +193,8 @@ public class IbkrCsvParser {
 					case SECTION_TRADES -> parseTrade(line, fieldMaps.get(line[0]));
 					case SECTION_CORPORATE_ACTIONS -> parseCorporateAction(line, fieldMaps.get(line[0]));
 					case SECTION_DEPOSITS_WITHDRAWALS -> parseDepositsWithdrawals(line, fieldMaps.get(line[0]));
-					case SECTION_CHANGE_IN_DIVIDEND_ACCRUALS -> parseChangeInDividendAccruals(line, fieldMaps.get(line[0]));
+					case SECTION_DIVIDENDS -> parseDividendEvent(line, fieldMaps.get(line[0]), Dividends::new);
+					case SECTION_WITHHOLDING_TAX -> parseDividendEvent(line, fieldMaps.get(line[0]), WithholdingTax::new);
 					default -> Optional.empty();
 					};
 				}
