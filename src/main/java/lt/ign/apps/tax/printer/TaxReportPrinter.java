@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 import lt.ign.apps.tax.core.CurrencyConverter;
 import lt.ign.apps.tax.model.Cover;
 import lt.ign.apps.tax.model.Currency;
-import lt.ign.apps.tax.model.event.Trade;
 
 public class TaxReportPrinter {
 
@@ -46,7 +45,7 @@ public class TaxReportPrinter {
 			var tradeRacInOriginal = new RevenueAndCost();
 
 			var closeInOriginal = cover.close();
-			var closeInBase = tradeInBase(closeInOriginal);
+			var closeInBase = currencyConverter.convert(closeInOriginal, baseCurrency);
 
 			ps.println(closeInOriginal.getSymbol());
 
@@ -59,7 +58,7 @@ public class TaxReportPrinter {
 				tradeRacInOriginal.addCost(openInOriginal.getProceeds());
 				tradeRacInOriginal.addCost(openInOriginal.getFees());
 
-				var openInBase = tradeInBase(openInOriginal);
+				var openInBase = currencyConverter.convert(openInOriginal, baseCurrency);
 				tradeRacInBase.addCost(openInBase.getProceeds());
 				tradeRacInBase.addCost(openInBase.getFees());
 
@@ -102,13 +101,6 @@ public class TaxReportPrinter {
 			totalRacInBase.cost, baseCurrency,
 			totalRacInBase.revenue, baseCurrency,
 			totalRacInBase.profitLoss(), baseCurrency));
-	}
-
-	private Trade tradeInBase(Trade trade) {
-		if (trade.getCurrency() == baseCurrency) {
-			return trade;
-		}
-		return currencyConverter.convert(trade, baseCurrency);
 	}
 
 	private static class RevenueAndCost {

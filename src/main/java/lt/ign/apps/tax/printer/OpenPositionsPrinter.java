@@ -53,7 +53,7 @@ public class OpenPositionsPrinter {
 				positionInOriginal.addProceeds(openInOriginal.getProceeds());
 				positionInOriginal.addFees(openInOriginal.getFees());
 
-				var openInBase = tradeInBase(openInOriginal);
+				var openInBase = currencyConverter.convert(openInOriginal, baseCurrency);
 				positionInBase.addProceeds(openInBase.getProceeds());
 				positionInBase.addFees(openInBase.getFees());
 
@@ -97,13 +97,6 @@ public class OpenPositionsPrinter {
 			totalInBase.total(), baseCurrency));
 
 		ps.println("====================================================================================================");
-	}
-
-	private Trade tradeInBase(Trade trade) {
-		if (trade.getCurrency() == baseCurrency) {
-			return trade;
-		}
-		return currencyConverter.convert(trade, baseCurrency);
 	}
 
 	private static class ProceedsAndFees {
