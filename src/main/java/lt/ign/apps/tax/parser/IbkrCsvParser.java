@@ -54,7 +54,8 @@ public class IbkrCsvParser {
 	private static final String HEADER_AMOUNT = "Amount";
 	private static final String HEADER_DATE = "Date";
 
-	private static final String DESCRIPTION_ELECTRONIC_FUND_TRANSFER = "Electronic Fund Transfer";
+	private static final String DESCRIPTION_ADJUSTMENT = "Adjustment:";
+	private static final String DESCRIPTION_INTERNAL = "Internal ";
 	private static final String DESCRIPTION_CASH_DIVIDEND = "Cash Dividend";
 
 	private static final String DATA_DISCRIMINATOR_ORDER = "Order";
@@ -130,7 +131,9 @@ public class IbkrCsvParser {
 	}
 
 	private static Optional<DepositWithdrawal> parseDepositsWithdrawals(String[] line, Map<String, Integer> fieldMap) {
-		if (!line[fieldMap.get(HEADER_DESCRIPTION)].equals(DESCRIPTION_ELECTRONIC_FUND_TRANSFER)) {
+		if (line[fieldMap.get(HEADER_CURRENCY)].startsWith(CURRENCY_TOTAL)
+			|| line[fieldMap.get(HEADER_DESCRIPTION)].startsWith(DESCRIPTION_ADJUSTMENT)
+			|| line[fieldMap.get(HEADER_DESCRIPTION)].startsWith(DESCRIPTION_INTERNAL)) {
 			return Optional.empty();
 		}
 
