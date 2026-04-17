@@ -3,6 +3,7 @@ package lt.ign.apps.tax.printer;
 import java.io.PrintStream;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 import lt.ign.apps.tax.model.event.DepositWithdrawal;
 
@@ -24,7 +25,7 @@ public class DepositsWithdrawalsPrinter {
 			if (lastYear[0] != 0 && curYear != lastYear[0]) {
 				ps.println("----------------------------------------------------------------------------------------------------");
 			}
-			ps.println(dw.toString());
+			ps.println(String.format(Locale.ROOT, "%s %.2f%s", dw.getDate(), dw.getAmount(), dw.getCurrency()));
 			lastYear[0] = curYear;
 		});
 		ps.println("====================================================================================================");

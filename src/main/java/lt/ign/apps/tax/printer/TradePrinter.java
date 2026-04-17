@@ -61,16 +61,18 @@ public class TradePrinter {
 	}
 
 	private void printMultiCurrencyString(Trade tradeInOriginal, PrintStream ps) {
-		ps.print(tradeInOriginal.toString());
+		ps.print(String.format(Locale.ROOT, "%s %s %s %d %.2f%s %.2f%s",
+			tradeInOriginal.getDateTime(), tradeInOriginal.getType(), tradeInOriginal.getSymbol(), tradeInOriginal.getQuantity(),
+			tradeInOriginal.getProceeds(), tradeInOriginal.getCurrency(),
+			tradeInOriginal.getFees(), tradeInOriginal.getCurrency()));
 
 		if (tradeInOriginal.getCurrency() != baseCurrency) {
 			var tradeInBase = (ModifiedTrade) currencyConverter.convert(tradeInOriginal, baseCurrency);
 			var currencyConversion = tradeInBase.getModifications().get(tradeInBase.getModifications().size() - 1);
-			var str = String.format(Locale.ROOT, " | %.2f%s %.2f%s (rate: %s)",
+			ps.print(String.format(Locale.ROOT, " | %.2f%s %.2f%s (rate: %s)",
 				tradeInBase.getProceeds(), tradeInBase.getCurrency(),
 				tradeInBase.getFees(), tradeInBase.getCurrency(),
-				currencyConversion.toString());
-			ps.print(str);
+				currencyConversion.toString()));
 		}
 	}
 

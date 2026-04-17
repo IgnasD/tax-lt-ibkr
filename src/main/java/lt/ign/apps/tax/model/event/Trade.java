@@ -3,7 +3,6 @@ package lt.ign.apps.tax.model.event;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Locale;
 
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.ModifiedTrade;
@@ -48,12 +47,6 @@ public class Trade extends StockEvent {
 
 	public Trade modify(Modifier modifier) {
 		return ModifiedTrade.create(this, List.of(modifier));
-	}
-
-	@Override
-	public String toString() {
-		return String.format(Locale.ROOT, "%s %s %s %d %.2f%s %.2f%s", getDateTime(), type, getSymbol(), quantity, proceeds, currency, fees,
-			currency);
 	}
 
 	public enum Type {
