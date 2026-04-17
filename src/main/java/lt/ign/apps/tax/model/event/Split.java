@@ -1,7 +1,6 @@
 package lt.ign.apps.tax.model.event;
 
 import java.time.LocalDateTime;
-import java.util.Locale;
 
 public class Split extends StockEvent {
 
@@ -14,11 +13,6 @@ public class Split extends StockEvent {
 
 	public int getMultiplier() {
 		return multiplier;
-	}
-
-	@Override
-	public String toString() {
-		return String.format(Locale.ROOT, "%s SPLIT %s %dx", getDateTime(), getSymbol(), multiplier);
 	}
 
 }
