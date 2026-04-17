@@ -4,5 +4,5 @@ import java.util.List;
 
 import lt.ign.apps.tax.model.event.Trade;
 
-public record CovererResult(List<Cover> covers, List<Trade> uncovered) {
+public record Position(List<Cover> covers, List<Trade> uncovered) {
 }

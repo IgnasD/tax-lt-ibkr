@@ -1,14 +1,12 @@
 package lt.ign.apps.tax;
 
 import java.nio.file.Paths;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import lt.ign.apps.tax.core.CurrencyConverter;
 import lt.ign.apps.tax.core.FifoTradeCoverer;
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.DepositWithdrawal;
-import lt.ign.apps.tax.model.event.StockEvent;
 import lt.ign.apps.tax.parser.EcbXmlParser;
 import lt.ign.apps.tax.parser.IbkrCsvParser;
 import lt.ign.apps.tax.printer.DepositsWithdrawalsPrinter;
@@ -25,18 +23,13 @@ public class App {
 
 		var entries = IbkrCsvParser.parse(csvFiles);
 
-		var covererResults = entries.stream()
-			.filter(e -> e instanceof StockEvent)
-			.map(e -> (StockEvent) e)
-			.collect(Collectors.groupingBy(StockEvent::getSymbol)).entrySet().stream()
-			.map(entry -> new FifoTradeCoverer(entry.getKey()).cover(entry.getValue()))
-			.toList();
+		var positions = new FifoTradeCoverer().cover(entries);
 
-		var covers = covererResults.stream()
+		var covers = positions.stream()
 			.flatMap(r -> r.covers().stream())
 			.toList();
 
-		var uncovered = covererResults.stream()
+		var uncovered = positions.stream()
 			.flatMap(r -> r.uncovered().stream())
 			.toList();
 

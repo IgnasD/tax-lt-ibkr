@@ -4,10 +4,12 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import lt.ign.apps.tax.model.Cover;
-import lt.ign.apps.tax.model.CovererResult;
+import lt.ign.apps.tax.model.Position;
 import lt.ign.apps.tax.model.event.DividendEvent;
+import lt.ign.apps.tax.model.event.ReportEntry;
 import lt.ign.apps.tax.model.event.Split;
 import lt.ign.apps.tax.model.event.StockEvent;
 import lt.ign.apps.tax.model.event.Trade;
@@ -16,13 +18,16 @@ import lt.ign.apps.tax.mods.StockSplit;
 
 public class FifoTradeCoverer {
 
-	private final String symbol;
-
-	public FifoTradeCoverer(String symbol) {
-		this.symbol = symbol;
+	public List<Position> cover(List<ReportEntry> entries) {
+		return entries.stream()
+			.filter(e -> e instanceof StockEvent)
+			.map(e -> (StockEvent) e)
+			.collect(Collectors.groupingBy(StockEvent::getSymbol)).entrySet().stream()
+			.map(entry -> coverSymbol(entry.getKey(), entry.getValue()))
+			.toList();
 	}
 
-	public CovererResult cover(List<StockEvent> events) {
+	private Position coverSymbol(String symbol, List<StockEvent> events) {
 		var covers = new ArrayList<Cover>();
 		var uncoveredOpens = new ArrayDeque<Trade>();
 
@@ -75,7 +80,7 @@ public class FifoTradeCoverer {
 			}
 		});
 
-		return new CovererResult(covers, new ArrayList<>(uncoveredOpens));
+		return new Position(covers, new ArrayList<>(uncoveredOpens));
 	}
 
 }
