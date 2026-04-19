@@ -20,7 +20,6 @@ import com.opencsv.exceptions.CsvException;
 
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.DepositWithdrawal;
-import lt.ign.apps.tax.model.event.DividendEvent;
 import lt.ign.apps.tax.model.event.Dividends;
 import lt.ign.apps.tax.model.event.ReportEntry;
 import lt.ign.apps.tax.model.event.Split;
@@ -54,6 +53,9 @@ public class IbkrCsvParser {
 	private static final String HEADER_AMOUNT = "Amount";
 	private static final String HEADER_DATE = "Date";
 
+	private static final String CODE_OPEN = "O";
+	private static final String CODE_CLOSE = "C";
+
 	private static final String DESCRIPTION_ADJUSTMENT = "Adjustment:";
 	private static final String DESCRIPTION_INTERNAL = "Internal ";
 	private static final String DESCRIPTION_CASH_DIVIDEND = "Cash Dividend";
@@ -64,8 +66,10 @@ public class IbkrCsvParser {
 
 	private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 	private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd, HH:mm:ss");
-	private static final Pattern splitPattern = Pattern.compile("^([a-zA-Z]+?)\\([A-Za-z0-9]+?\\) Split ([0-9]+?) for ([0-9]+?) ");
+	private static final Pattern splitPattern = Pattern.compile("^([a-zA-Z]+?) ?\\([A-Za-z0-9]+?\\) Split ([0-9]+?) for ([0-9]+?) ");
+	private static final Pattern cusipIsinChangePattern = Pattern.compile("^([a-zA-Z]+?) ?\\([A-Za-z0-9]+?\\) CUSIP/ISIN Change ");
 	private static final Pattern dividendsPattern = Pattern.compile("^([a-zA-Z]+?) ?\\([A-Za-z0-9]+?\\) (Cash Dividend|Payment in Lieu) ");
+	private static final Pattern withholdingCreditInterestPattern = Pattern.compile("^Withholding @ [\\d\\.]+?% on Credit Interest for ");
 
 	private static Map<String, Integer> genFieldMap(String[] fields) {
 		var fieldMap = new HashMap<String, Integer>();
@@ -75,17 +79,20 @@ public class IbkrCsvParser {
 		return fieldMap;
 	}
 
-	private static Trade.Type parseTradeType(String str) {
-		switch (str) {
-		case "O":
-		case "O;P":
-			return Trade.Type.OPEN;
-		case "C":
-		case "C;P":
-			return Trade.Type.CLOSE;
-		default:
-			throw new UnsupportedOperationException("Unknown code: " + str);
+	private static Trade.Type parseTradeType(String code) {
+		var codes = Arrays.asList(code.split(";"));
+		var open = codes.contains(CODE_OPEN);
+		var close = codes.contains(CODE_CLOSE);
+		if (open && close) {
+			throw new IllegalStateException("Got both open and close in code: " + code);
 		}
+		if (open) {
+			return Trade.Type.OPEN;
+		}
+		if (close) {
+			return Trade.Type.CLOSE;
+		}
+		throw new UnsupportedOperationException("Unknown code: " + code);
 	}
 
 	private static Optional<Trade> parseTrade(String[] line, Map<String, Integer> fieldMap) {
@@ -110,11 +117,15 @@ public class IbkrCsvParser {
 			return Optional.empty();
 		}
 
+		if (cusipIsinChangePattern.matcher(line[fieldMap.get(HEADER_DESCRIPTION)]).find()) {
+			return Optional.empty();
+		}
+
 		var matcher = splitPattern.matcher(line[fieldMap.get(HEADER_DESCRIPTION)]);
 
 		if (!matcher.find() || !line[fieldMap.get(HEADER_PROCEEDS)].equals("0") || !line[fieldMap.get(HEADER_VALUE)].equals("0")
 			|| !line[fieldMap.get(HEADER_REALIZED_PL)].equals("0") || !line[fieldMap.get(HEADER_CODE)].isEmpty()) {
-			throw new UnsupportedOperationException("Unknown split detected: " + Arrays.toString(line));
+			throw new UnsupportedOperationException("Unknown corporate action: " + Arrays.toString(line));
 		}
 
 		var dateTime = LocalDateTime.parse(line[fieldMap.get(HEADER_DATE_TIME)], dateTimeFormatter);
@@ -144,13 +155,7 @@ public class IbkrCsvParser {
 		return Optional.of(new DepositWithdrawal(currency, date, amount));
 	}
 
-	@FunctionalInterface
-	private interface DividendEventConstructor {
-		DividendEvent construct(String symbol, LocalDateTime dateTime, Currency currency, BigDecimal amount);
-	}
-
-	private static Optional<DividendEvent> parseDividendEvent(String[] line, Map<String, Integer> fieldMap,
-		DividendEventConstructor constructor) {
+	private static Optional<Dividends> parseDividends(String[] line, Map<String, Integer> fieldMap) {
 		if (line[fieldMap.get(HEADER_CURRENCY)].startsWith(CURRENCY_TOTAL)) {
 			return Optional.empty();
 		}
@@ -169,7 +174,32 @@ public class IbkrCsvParser {
 
 		var symbol = matcher.group(1);
 
-		return Optional.of(constructor.construct(symbol, date.atStartOfDay(), currency, amount));
+		return Optional.of(new Dividends(symbol, date.atStartOfDay(), currency, amount));
+	}
+
+	private static Optional<WithholdingTax> parseWithholdingTax(String[] line, Map<String, Integer> fieldMap) {
+		if (line[fieldMap.get(HEADER_CURRENCY)].startsWith(CURRENCY_TOTAL)) {
+			return Optional.empty();
+		}
+
+		WithholdingTax.Type type = null;
+		Optional<String> symbol = Optional.empty();
+		var matcher = dividendsPattern.matcher(line[fieldMap.get(HEADER_DESCRIPTION)]);
+		if (matcher.find()) {
+			if (!matcher.group(2).equals(DESCRIPTION_CASH_DIVIDEND)) {
+				return Optional.empty();
+			}
+			type = WithholdingTax.Type.DIVIDEND;
+			symbol = Optional.of(matcher.group(1));
+		} else if (withholdingCreditInterestPattern.matcher(line[fieldMap.get(HEADER_DESCRIPTION)]).find()) {
+			type = WithholdingTax.Type.CREDIT_INTEREST;
+		}
+
+		var currency = Currency.valueOf(line[fieldMap.get(HEADER_CURRENCY)]);
+		var date = LocalDate.parse(line[fieldMap.get(HEADER_DATE)], dateFormatter);
+		var amount = new BigDecimal(line[fieldMap.get(HEADER_AMOUNT)]);
+
+		return Optional.of(new WithholdingTax(currency, date, type, amount, symbol));
 	}
 
 	private static List<ReportEntry> parseFile(Path csvFile) {
@@ -196,8 +226,8 @@ public class IbkrCsvParser {
 					case SECTION_TRADES -> parseTrade(line, fieldMaps.get(line[0]));
 					case SECTION_CORPORATE_ACTIONS -> parseCorporateAction(line, fieldMaps.get(line[0]));
 					case SECTION_DEPOSITS_WITHDRAWALS -> parseDepositsWithdrawals(line, fieldMaps.get(line[0]));
-					case SECTION_DIVIDENDS -> parseDividendEvent(line, fieldMaps.get(line[0]), Dividends::new);
-					case SECTION_WITHHOLDING_TAX -> parseDividendEvent(line, fieldMaps.get(line[0]), WithholdingTax::new);
+					case SECTION_DIVIDENDS -> parseDividends(line, fieldMaps.get(line[0]));
+					case SECTION_WITHHOLDING_TAX -> parseWithholdingTax(line, fieldMaps.get(line[0]));
 					default -> Optional.empty();
 					};
 				}

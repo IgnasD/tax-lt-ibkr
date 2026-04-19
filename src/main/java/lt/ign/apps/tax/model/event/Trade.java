@@ -57,7 +57,7 @@ public class Trade extends StockEvent implements CurrencyConvertable<Trade> {
 		return modify(new CurrencyConversion(exchangeRate));
 	}
 
-	public enum Type {
+	public static enum Type {
 		OPEN, CLOSE
 	}
 

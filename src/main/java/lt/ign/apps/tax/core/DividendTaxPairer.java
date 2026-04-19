@@ -8,7 +8,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import lt.ign.apps.tax.model.TaxedDividends;
-import lt.ign.apps.tax.model.event.DividendEvent;
 import lt.ign.apps.tax.model.event.Dividends;
 import lt.ign.apps.tax.model.event.ReportEntry;
 import lt.ign.apps.tax.model.event.WithholdingTax;
@@ -17,21 +16,42 @@ public class DividendTaxPairer {
 
 	public List<TaxedDividends> pair(List<ReportEntry> entries) {
 		return entries.stream()
-			.filter(e -> e instanceof DividendEvent)
-			.map(e -> (DividendEvent) e)
-			.collect(Collectors.groupingBy(DividendEvent::getSymbol)).values().stream()
+			.filter(e -> {
+				if (e instanceof Dividends) {
+					return true;
+				} else if (e instanceof WithholdingTax wt) {
+					return wt.getType() == WithholdingTax.Type.DIVIDEND;
+				} else {
+					return false;
+				}
+			})
+			.collect(Collectors.groupingBy(e -> {
+				if (e instanceof Dividends d) {
+					return d.getSymbol();
+				} else if (e instanceof WithholdingTax wt) {
+					return wt.getSymbol().get();
+				}
+				throw new IllegalStateException("Should not happen");
+			})).values().stream()
 			.flatMap(this::pairSymbol)
 			.toList();
 	}
 
-	private Stream<TaxedDividends> pairSymbol(List<DividendEvent> events) {
+	private Stream<TaxedDividends> pairSymbol(List<ReportEntry> events) {
 		return events.stream()
-			.collect(Collectors.groupingBy(DividendEvent::getDateTime)).values().stream()
+			.collect(Collectors.groupingBy(e -> {
+				if (e instanceof Dividends d) {
+					return d.getDateTime().toLocalDate();
+				} else if (e instanceof WithholdingTax wt) {
+					return wt.getDate();
+				}
+				throw new IllegalStateException("Should not happen");
+			})).values().stream()
 			.flatMap(this::pairSymbolDate);
 	}
 
-	private Stream<TaxedDividends> pairSymbolDate(List<DividendEvent> events) {
-		var classes = events.stream().map(DividendEvent::getClass).distinct().count();
+	private Stream<TaxedDividends> pairSymbolDate(List<ReportEntry> events) {
+		var classes = events.stream().map(ReportEntry::getClass).distinct().count();
 
 		if (classes == 1 && events.get(0) instanceof Dividends) {
 			// dividends without withholding tax
@@ -39,7 +59,7 @@ public class DividendTaxPairer {
 		}
 
 		if (classes != 2) {
-			throw new UnsupportedOperationException("To many DividendEvent classes: " + classes);
+			throw new UnsupportedOperationException("To many classes for dividend tax mapping: " + classes);
 		}
 		if (events.size() % 2 != 0) {
 			throw new UnsupportedOperationException("Odd number of dividend events");

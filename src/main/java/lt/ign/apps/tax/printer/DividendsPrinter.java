@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 import lt.ign.apps.tax.core.CurrencyConverter;
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.TaxedDividends;
-import lt.ign.apps.tax.model.event.DividendEvent;
 
 public class DividendsPrinter {
 
@@ -29,7 +28,7 @@ public class DividendsPrinter {
 			ps.println("====================================================================================================");
 			ps.println("Dividends: " + entry.getKey());
 			ps.println("----------------------------------------------------------------------------------------------------");
-			entry.getValue().stream().sorted(Comparator.comparing(DividendEvent::getSymbol).thenComparing(DividendEvent::getDateTime))
+			entry.getValue().stream().sorted(Comparator.comparing(TaxedDividends::getSymbol).thenComparing(TaxedDividends::getDateTime))
 				.forEach(d -> {
 					ps.print(String.format(Locale.ROOT, "%s %s %.2f%s + %.2f%s = %.2f%s",
 						d.getDateTime().toLocalDate(), d.getSymbol(),
