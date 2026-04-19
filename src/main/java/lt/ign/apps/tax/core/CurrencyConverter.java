@@ -34,6 +34,10 @@ public class CurrencyConverter {
 		return new ExchangeRate(conversionDate, sourceCurrency, targetCurrency, conversionRate);
 	}
 
+	public <T extends CurrencyConvertable<T>> ExchangeRate getExchangeRate(T convertable, Currency targetCurrency) {
+		return getExchangeRate(convertable.getDateTime(), convertable.getCurrency(), targetCurrency);
+	}
+
 	public <T extends CurrencyConvertable<T>> T convert(T convertable, Currency targetCurrency) {
 		var currency = convertable.getCurrency();
 		if (currency == targetCurrency) {

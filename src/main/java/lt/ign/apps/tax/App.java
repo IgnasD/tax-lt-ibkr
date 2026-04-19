@@ -4,20 +4,25 @@ import java.nio.file.Paths;
 import java.util.stream.Stream;
 
 import lt.ign.apps.tax.core.CurrencyConverter;
+import lt.ign.apps.tax.core.DividendTaxPairer;
 import lt.ign.apps.tax.core.FifoTradeCoverer;
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.DepositWithdrawal;
 import lt.ign.apps.tax.parser.EcbXmlParser;
 import lt.ign.apps.tax.parser.IbkrCsvParser;
 import lt.ign.apps.tax.printer.DepositsWithdrawalsPrinter;
+import lt.ign.apps.tax.printer.DividendsPrinter;
 import lt.ign.apps.tax.printer.OpenPositionsPrinter;
 import lt.ign.apps.tax.printer.TaxReportPrinter;
 
 public class App {
 
 	public static void main(String[] args) {
+		var humanReadableOut = System.out;
+
 		var csvFiles = Stream.of(args).map(Paths::get).toList();
 
+		var baseCurrency = Currency.EUR;
 		var usdEurRates = EcbXmlParser.forCurrency(Currency.USD).parseRates();
 		var currencyConverter = new CurrencyConverter(usdEurRates);
 
@@ -33,14 +38,23 @@ public class App {
 			.flatMap(r -> r.uncovered().stream())
 			.toList();
 
+		new TaxReportPrinter(covers, baseCurrency, currencyConverter).print(humanReadableOut);
+		new OpenPositionsPrinter(uncovered, baseCurrency, currencyConverter).print(humanReadableOut);
+
+		// -
+
 		var depositsWithdrawals = entries.stream()
 			.filter(e -> e instanceof DepositWithdrawal)
 			.map(e -> (DepositWithdrawal) e)
 			.toList();
 
-		new TaxReportPrinter(covers, Currency.EUR, currencyConverter).print(System.out);
-		new OpenPositionsPrinter(uncovered, Currency.EUR, currencyConverter).print(System.out);
-		new DepositsWithdrawalsPrinter(depositsWithdrawals).print(System.out);
+		new DepositsWithdrawalsPrinter(depositsWithdrawals).print(humanReadableOut);
+
+		// -
+
+		var taxedDividends = new DividendTaxPairer().pair(entries);
+
+		new DividendsPrinter(taxedDividends, baseCurrency, currencyConverter).print(humanReadableOut);
 	}
 
 }
