@@ -8,6 +8,7 @@ import lt.ign.apps.tax.core.CurrencyConverter;
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.ModifiedTrade;
 import lt.ign.apps.tax.model.event.Trade;
+import lt.ign.apps.tax.mods.CurrencyConversion;
 import lt.ign.apps.tax.mods.Modifier;
 import lt.ign.apps.tax.mods.PartialQuantity;
 import lt.ign.apps.tax.mods.StockSplit;
@@ -68,11 +69,11 @@ public class TradePrinter {
 
 		if (tradeInOriginal.getCurrency() != baseCurrency) {
 			var tradeInBase = (ModifiedTrade) currencyConverter.convert(tradeInOriginal, baseCurrency);
-			var currencyConversion = tradeInBase.getModifications().get(tradeInBase.getModifications().size() - 1);
+			var currencyConversion = (CurrencyConversion) tradeInBase.getModifications().get(tradeInBase.getModifications().size() - 1);
 			ps.print(String.format(Locale.ROOT, " | %.2f%s %.2f%s (rate: %s)",
 				tradeInBase.getProceeds(), tradeInBase.getCurrency(),
 				tradeInBase.getFees(), tradeInBase.getCurrency(),
-				currencyConversion.toString()));
+				currencyConversion.getExchangeRate().toString()));
 		}
 	}
 
