@@ -21,6 +21,7 @@ import com.opencsv.exceptions.CsvException;
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.DepositWithdrawal;
 import lt.ign.apps.tax.model.event.Dividends;
+import lt.ign.apps.tax.model.event.Interest;
 import lt.ign.apps.tax.model.event.ReportEntry;
 import lt.ign.apps.tax.model.event.Split;
 import lt.ign.apps.tax.model.event.Trade;
@@ -33,6 +34,7 @@ public class IbkrCsvParser {
 	private static final String SECTION_DEPOSITS_WITHDRAWALS = "Deposits & Withdrawals";
 	private static final String SECTION_DIVIDENDS = "Dividends";
 	private static final String SECTION_WITHHOLDING_TAX = "Withholding Tax";
+	private static final String SECTION_INTEREST = "Interest";
 
 	private static final String LINE_HEADER = "Header";
 	private static final String LINE_DATA = "Data";
@@ -59,6 +61,7 @@ public class IbkrCsvParser {
 	private static final String DESCRIPTION_ADJUSTMENT = "Adjustment:";
 	private static final String DESCRIPTION_INTERNAL = "Internal ";
 	private static final String DESCRIPTION_CASH_DIVIDEND = "Cash Dividend";
+	private static final String DESCRIPTION_CREDIT_INTEREST = "Credit Interest";
 
 	private static final String DATA_DISCRIMINATOR_ORDER = "Order";
 	private static final String ASSET_CATEGORY_STOCKS = "Stocks";
@@ -70,6 +73,7 @@ public class IbkrCsvParser {
 	private static final Pattern cusipIsinChangePattern = Pattern.compile("^([a-zA-Z]+?) ?\\([A-Za-z0-9]+?\\) CUSIP/ISIN Change ");
 	private static final Pattern dividendsPattern = Pattern.compile("^([a-zA-Z]+?) ?\\([A-Za-z0-9]+?\\) (Cash Dividend|Payment in Lieu) ");
 	private static final Pattern withholdingCreditInterestPattern = Pattern.compile("^Withholding @ [\\d\\.]+?% on Credit Interest for ");
+	private static final Pattern creditInterestPattern = Pattern.compile("^[A-Z]{3} (Credit Interest|Investment Loan Interest) for ");
 
 	private static Map<String, Integer> genFieldMap(String[] fields) {
 		var fieldMap = new HashMap<String, Integer>();
@@ -163,8 +167,7 @@ public class IbkrCsvParser {
 		var matcher = dividendsPattern.matcher(line[fieldMap.get(HEADER_DESCRIPTION)]);
 		if (!matcher.find()) {
 			throw new UnsupportedOperationException("Unknown dividends pattern: " + Arrays.toString(line));
-		}
-		if (!matcher.group(2).equals(DESCRIPTION_CASH_DIVIDEND)) {
+		} else if (!matcher.group(2).equals(DESCRIPTION_CASH_DIVIDEND)) {
 			return Optional.empty();
 		}
 
@@ -202,6 +205,25 @@ public class IbkrCsvParser {
 		return Optional.of(new WithholdingTax(currency, date, type, amount, symbol));
 	}
 
+	private static Optional<Interest> parseInterest(String[] line, Map<String, Integer> fieldMap) {
+		if (line[fieldMap.get(HEADER_CURRENCY)].startsWith(CURRENCY_TOTAL)) {
+			return Optional.empty();
+		}
+
+		var matcher = creditInterestPattern.matcher(line[fieldMap.get(HEADER_DESCRIPTION)]);
+		if (!matcher.find()) {
+			throw new UnsupportedOperationException("Unknown interest: " + Arrays.toString(line));
+		} else if (!matcher.group(1).equals(DESCRIPTION_CREDIT_INTEREST)) {
+			return Optional.empty();
+		}
+
+		var currency = Currency.valueOf(line[fieldMap.get(HEADER_CURRENCY)]);
+		var date = LocalDate.parse(line[fieldMap.get(HEADER_DATE)], dateFormatter);
+		var amount = new BigDecimal(line[fieldMap.get(HEADER_AMOUNT)]);
+
+		return Optional.of(new Interest(currency, date, amount));
+	}
+
 	private static List<ReportEntry> parseFile(Path csvFile) {
 		var entries = new ArrayList<ReportEntry>();
 
@@ -217,6 +239,7 @@ public class IbkrCsvParser {
 					case SECTION_DEPOSITS_WITHDRAWALS:
 					case SECTION_DIVIDENDS:
 					case SECTION_WITHHOLDING_TAX:
+					case SECTION_INTEREST:
 						fieldMaps.put(line[0], genFieldMap(line));
 						break;
 					}
@@ -228,6 +251,7 @@ public class IbkrCsvParser {
 					case SECTION_DEPOSITS_WITHDRAWALS -> parseDepositsWithdrawals(line, fieldMaps.get(line[0]));
 					case SECTION_DIVIDENDS -> parseDividends(line, fieldMaps.get(line[0]));
 					case SECTION_WITHHOLDING_TAX -> parseWithholdingTax(line, fieldMaps.get(line[0]));
+					case SECTION_INTEREST -> parseInterest(line, fieldMaps.get(line[0]));
 					default -> Optional.empty();
 					};
 				}

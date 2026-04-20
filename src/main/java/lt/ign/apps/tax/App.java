@@ -6,12 +6,14 @@ import java.util.stream.Stream;
 import lt.ign.apps.tax.core.CurrencyConverter;
 import lt.ign.apps.tax.core.DividendTaxPairer;
 import lt.ign.apps.tax.core.FifoTradeCoverer;
+import lt.ign.apps.tax.core.InterestTaxPairer;
 import lt.ign.apps.tax.model.Currency;
 import lt.ign.apps.tax.model.event.DepositWithdrawal;
 import lt.ign.apps.tax.parser.EcbXmlParser;
 import lt.ign.apps.tax.parser.IbkrCsvParser;
 import lt.ign.apps.tax.printer.DepositsWithdrawalsPrinter;
 import lt.ign.apps.tax.printer.DividendsPrinter;
+import lt.ign.apps.tax.printer.InterestPrinter;
 import lt.ign.apps.tax.printer.OpenPositionsPrinter;
 import lt.ign.apps.tax.printer.TaxReportPrinter;
 
@@ -55,6 +57,12 @@ public class App {
 		var taxedDividends = new DividendTaxPairer().pair(entries);
 
 		new DividendsPrinter(taxedDividends, baseCurrency, currencyConverter).print(humanReadableOut);
+
+		// -
+
+		var taxedInterest = new InterestTaxPairer().pair(entries);
+
+		new InterestPrinter(taxedInterest, baseCurrency, currencyConverter).print(humanReadableOut);
 	}
 
 }
