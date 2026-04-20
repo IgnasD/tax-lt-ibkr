@@ -69,11 +69,12 @@ public class IbkrCsvParser {
 
 	private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 	private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd, HH:mm:ss");
+
 	private static final Pattern splitPattern = Pattern.compile("^([a-zA-Z]+?) ?\\([A-Za-z0-9]+?\\) Split ([0-9]+?) for ([0-9]+?) ");
 	private static final Pattern cusipIsinChangePattern = Pattern.compile("^([a-zA-Z]+?) ?\\([A-Za-z0-9]+?\\) CUSIP/ISIN Change ");
 	private static final Pattern dividendsPattern = Pattern.compile("^([a-zA-Z]+?) ?\\([A-Za-z0-9]+?\\) (Cash Dividend|Payment in Lieu) ");
 	private static final Pattern withholdingCreditInterestPattern = Pattern.compile("^Withholding @ [\\d\\.]+?% on Credit Interest for ");
-	private static final Pattern creditInterestPattern = Pattern.compile("^[A-Z]{3} (Credit Interest|Investment Loan Interest) for ");
+	private static final Pattern interestPattern = Pattern.compile("^[A-Z]{3} (Credit Interest|Investment Loan Interest) for ");
 
 	private static Map<String, Integer> genFieldMap(String[] fields) {
 		var fieldMap = new HashMap<String, Integer>();
@@ -210,7 +211,7 @@ public class IbkrCsvParser {
 			return Optional.empty();
 		}
 
-		var matcher = creditInterestPattern.matcher(line[fieldMap.get(HEADER_DESCRIPTION)]);
+		var matcher = interestPattern.matcher(line[fieldMap.get(HEADER_DESCRIPTION)]);
 		if (!matcher.find()) {
 			throw new UnsupportedOperationException("Unknown interest: " + Arrays.toString(line));
 		} else if (!matcher.group(1).equals(DESCRIPTION_CREDIT_INTEREST)) {
