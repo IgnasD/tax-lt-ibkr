@@ -24,8 +24,8 @@ public class OpenPositionsPrinter {
 	}
 
 	public void print(PrintStream ps) {
-		var totalInBase = new ProceedsAndFees();
-		var totalPerCurrency = new TreeMap<Currency, ProceedsAndFees>();
+		var totalInBase = new Totals();
+		var totalPerCurrency = new TreeMap<Currency, Totals>();
 
 		var opensPerSymbol = uncovered.stream().collect(Collectors.groupingBy(Trade::getSymbol));
 		ps.println("====================================================================================================");
@@ -37,8 +37,8 @@ public class OpenPositionsPrinter {
 
 			ps.println(symbol);
 
-			var positionInBase = new ProceedsAndFees();
-			var positionInOriginal = new ProceedsAndFees();
+			var positionInBase = new Totals();
+			var positionInOriginal = new Totals();
 
 			Currency originalCurrency = null;
 
@@ -50,12 +50,10 @@ public class OpenPositionsPrinter {
 						openInOriginal.getCurrency()));
 				}
 
-				positionInOriginal.addProceeds(openInOriginal.getProceeds());
-				positionInOriginal.addFees(openInOriginal.getFees());
+				positionInOriginal.add(openInOriginal);
 
 				var openInBase = currencyConverter.convert(openInOriginal, baseCurrency);
-				positionInBase.addProceeds(openInBase.getProceeds());
-				positionInBase.addFees(openInBase.getFees());
+				positionInBase.add(openInBase);
 
 				new TradePrinter(openInOriginal, baseCurrency, currencyConverter).print(ps);
 			}
@@ -75,10 +73,7 @@ public class OpenPositionsPrinter {
 			ps.println("----------------------------------------------------------------------------------------------------");
 
 			totalInBase.add(positionInBase);
-			totalPerCurrency.merge(originalCurrency, positionInOriginal, (a, b) -> {
-				a.add(b);
-				return a;
-			});
+			totalPerCurrency.merge(originalCurrency, positionInOriginal, Totals::sum);
 		}
 
 		totalPerCurrency.entrySet().forEach(e -> {
@@ -99,25 +94,34 @@ public class OpenPositionsPrinter {
 		ps.println("====================================================================================================");
 	}
 
-	private static class ProceedsAndFees {
-		private BigDecimal proceeds = BigDecimal.ZERO;
-		private BigDecimal fees = BigDecimal.ZERO;
+	private static class Totals {
+		private BigDecimal proceeds;
+		private BigDecimal fees; // negatively denominated
 
-		private void addProceeds(BigDecimal revenue) {
-			this.proceeds = this.proceeds.add(revenue);
+		private Totals() {
+			proceeds = BigDecimal.ZERO;
+			fees = BigDecimal.ZERO;
 		}
 
-		private void addFees(BigDecimal cost) {
-			this.fees = this.fees.add(cost);
+		private void add(Totals totals) {
+			proceeds = proceeds.add(totals.proceeds);
+			fees = fees.add(totals.fees);
 		}
 
-		private void add(ProceedsAndFees other) {
-			addProceeds(other.proceeds);
-			addFees(other.fees);
+		private void add(Trade trade) {
+			proceeds = proceeds.add(trade.getProceeds());
+			fees = fees.add(trade.getFees());
 		}
 
 		private BigDecimal total() {
-			return this.proceeds.add(fees);
+			return proceeds.add(fees);
+		}
+
+		private static Totals sum(Totals a, Totals b) {
+			var totals = new Totals();
+			totals.proceeds = a.proceeds.add(b.proceeds);
+			totals.fees = a.fees.add(b.fees);
+			return totals;
 		}
 	}
 
